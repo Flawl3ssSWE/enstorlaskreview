@@ -28,3 +28,8 @@ export const sanitizeSlug = (value: string): string => {
 		.replace(/-+/g, '-')
 		.replace(/^[-]+|[-]+$/g, '');
 };
+
+/** Formats a user-entered soda name or ID for the generator, never persisted content. */
+export function generateSodaId(text: string): string {
+	return generateSlug(text.normalize('NFKD').replace(/\p{M}/gu, '')).replace(/-+/g, '-');
+}

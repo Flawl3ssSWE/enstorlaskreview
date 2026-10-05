@@ -1,0 +1,27 @@
+{
+	"title": "Läsk med egen förpackning",
+	"slug": "egen-forpackning",
+	"image": "test-bar.png",
+	"location": "",
+	"createdAt": "2025-01-01T12:00:00.000Z",
+	"updatedAt": "2025-01-02T12:00:00.000Z",
+	"isEnergyDrink": true,
+	"caffeineMgPer100Ml": 32,
+	"author": "Egen testrecensent",
+	"container": "Annan",
+	"description": "Frisk och balanserad enligt Alex.",
+	"favorite": true,
+	"sodaRatings": {
+		"taste": 5,
+		"sweetness": 3,
+		"carbonation": 5,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 5,
+		"drinkability": 5,
+		"matchesName": 5,
+		"value": 5
+	},
+	"beerPriceKr": 20,
+	"volumeMl": 275,
+	"customContainer": "Pappmugg"
+}

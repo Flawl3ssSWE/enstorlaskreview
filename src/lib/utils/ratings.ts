@@ -1,4 +1,4 @@
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
+import { REVIEW_RATING_METRICS } from '../review-metadata.ts';
 
 export function calculateOverallRating(values: number[]): number {
 	const weighted = REVIEW_RATING_METRICS.reduce(
@@ -6,6 +6,10 @@ export function calculateOverallRating(values: number[]): number {
 		0
 	);
 
+	return ratingFromAverage(weighted);
+}
+
+export function ratingFromAverage(weighted: number): number {
 	if (weighted >= 4.5) return 3;
 	if (weighted >= 3.25) return 2;
 	if (weighted >= 2) return 1;

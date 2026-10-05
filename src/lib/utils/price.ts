@@ -8,16 +8,26 @@ export interface BeerPriceDisplay {
 
 export const isValidBeerPriceKr = (value: number | null | undefined): value is number => {
 	return (
-		typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= MAX_BEER_PRICE_KR
+		typeof value === 'number' &&
+		/^\d+(?:\.\d)?$/.test(String(value)) &&
+		value >= 1 &&
+		value <= MAX_BEER_PRICE_KR
 	);
 };
+
+/** Parses the generator's price field without accepting extra decimal places. */
+export function parsePriceInput(value: string): number | undefined {
+	const text = value.trim();
+	if (!text) return undefined;
+	return /^\d+(?:[.,]\d)?$/.test(text) ? Number(text.replace(',', '.')) : NaN;
+}
 
 export const formatBeerPrice = (
 	beerPriceKr: number | null | undefined,
 	isHappyHourPrice = false
 ): string | null => {
 	if (!isValidBeerPriceKr(beerPriceKr)) return null;
-	return `${beerPriceKr} kr${isHappyHourPrice ? '*' : ''}`;
+	return `${String(beerPriceKr).replace('.', ',')} kr${isHappyHourPrice ? '*' : ''}`;
 };
 
 export const getBeerPriceDisplay = (

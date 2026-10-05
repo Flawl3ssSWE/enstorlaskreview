@@ -1,0 +1,32 @@
+{
+	"title": "Rockstar Guava Zero",
+	"sodaId": "rockstar",
+	"slug": "rockstar-guava-zero-anton",
+	"image": "rockstar-guava-zero-anton.png",
+	"location": "",
+	"createdAt": "2026-10-03T21:46:25.676Z",
+	"updatedAt": "2026-10-05T22:01:14.613Z",
+	"author": "Anton",
+	"description": "Smakar lite godisaktigt men inget direkt som man kan koppla smaken till, har aldrig ätit en guava så kanske därför. Kolsyrehalten är självjusterad i och med det är en \"SodaStream läsk\", så väldigt fair att ge den ett högt betyg ;).",
+	"favorite": false,
+	"repurchasePotential": 3,
+	"sodaRatings": {
+		"taste": 3,
+		"sweetness": 4,
+		"carbonation": 5,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 5,
+		"drinkability": 4,
+		"matchesName": 4,
+		"value": 5
+	},
+	"container": "SodaStream smak",
+	"volumeMl": 800,
+	"isEnergyDrink": true,
+	"caffeineMgPer100Ml": 20,
+	"beerBrand": "Rockstar",
+	"beerPriceKr": 4.4,
+	"servingMethods": ["Glas"],
+	"sugarType": "sugar-free",
+	"servingTemperature": "Kylskåpskall"
+}

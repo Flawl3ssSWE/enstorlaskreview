@@ -13,14 +13,11 @@
 <div
 	class:review-description--full={variant === 'full'}
 	class:review-description--preview={variant === 'preview'}
-	class="review-description text-sm leading-relaxed text-slate-700 sm:text-base"
+	class="review-description text-sm leading-relaxed text-secondary sm:text-base"
 	data-testid={variant === 'preview' ? 'review-description-preview' : 'review-description'}
 >
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- MarkdownIt escapes raw HTML before this is rendered. -->
 	{@html html}
-	{#if variant === 'preview'}
-		<div class="review-description__fade" aria-hidden="true"></div>
-	{/if}
 </div>
 
 <style>
@@ -32,7 +29,7 @@
 	.review-description :global(h2),
 	.review-description :global(h3) {
 		margin: 0;
-		color: var(--color-slate-900);
+		color: var(--color-ink);
 	}
 
 	.review-description--full :global(h1) {
@@ -80,6 +77,7 @@
 	}
 
 	.review-description--preview {
+		mask-image: linear-gradient(to bottom, black calc(100% - 1.75rem), transparent);
 		height: 5rem;
 		overflow: hidden;
 	}
@@ -96,15 +94,5 @@
 	.review-description--preview :global(ul),
 	.review-description--preview :global(ol) {
 		margin-top: 0.25rem;
-	}
-
-	.review-description__fade {
-		position: absolute;
-		right: 0;
-		bottom: 0;
-		left: 0;
-		height: 1.75rem;
-		pointer-events: none;
-		background: linear-gradient(to bottom, rgb(255 255 255 / 0), rgb(255 255 255 / 0.9));
 	}
 </style>

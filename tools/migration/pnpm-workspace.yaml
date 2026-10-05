@@ -1,0 +1,8 @@
+packages:
+  - '.'
+engineStrict: true
+minimumReleaseAge: 10080
+strictDepBuilds: true
+allowBuilds: {}
+verifyStoreIntegrity: true
+blockExoticSubdeps: true

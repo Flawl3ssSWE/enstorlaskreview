@@ -1,18 +1,27 @@
-export interface ReviewStatisticBar {
+import type { SodaRatingValues } from './bar-review';
+
+export interface ReviewStatisticProduct {
 	title: string;
 	slug: string;
-	beerPriceKr: number;
-	isHappyHourPrice: boolean;
+	value: number;
 }
 
 export interface PublicReviewStatistics {
 	totalReviews: number;
-	gothenburgReviews: number;
-	averageRating: number | null;
+	productCount: number;
+	brandCount: number;
+	sodaReviewCount: number;
+	averageSodaScore: number | null;
 	priceReviewCount: number;
-	averageBeerPrice: number | null;
-	happyHourReviewCount: number;
-	happyHourPercentage: number | null;
-	cheapestBars: ReviewStatisticBar[];
-	mostExpensiveBars: ReviewStatisticBar[];
+	averagePrice: number | null;
+	unitPriceReviewCount: number;
+	averagePricePerLiter: number | null;
+	repurchaseReviewCount: number;
+	averageRepurchasePotential: number | null;
+	favoriteReviewCount: number;
+	favoriteCount: number;
+	favoritePercentage: number | null;
+	ratingAverages: Array<{ key: keyof SodaRatingValues; average: number | null; count: number }>;
+	topRatedProducts: ReviewStatisticProduct[];
+	bestValueProducts: ReviewStatisticProduct[];
 }

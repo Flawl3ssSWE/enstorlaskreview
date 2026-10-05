@@ -1,132 +1,37 @@
-# Architecture and rule ownership
+# Static architecture and rule ownership
 
-The app uses functions and small dependency contracts. Routes handle SvelteKit requests;
-workflows sequence business operations; focused helpers own rules; production adapters supply
-MongoDB, image storage, auditing, and external delivery. Browser components never import server
-modules, including for shared types.
+## Data flow
 
-```mermaid
-flowchart TD
-    Route[Server route: authenticate, parse, respond] --> Workflow[Review or request workflow]
-    Route --> Load[Visibility-filtered page queries]
-    Workflow --> Rules[Validation, authorship, persistence fields, history]
-    Workflow --> Dependencies[Small dependency contracts]
-    Wiring[Production composition] --> Dependencies
-    Dependencies --> Mongo[MongoDB operations]
-    Dependencies --> Images[Image processing and storage]
-    Dependencies --> Audit[Non-throwing audit writer]
-    Dependencies --> Cache[Public map and statistics invalidation]
-    Dependencies --> Delivery[Discord delivery]
-    Route --> Types[Shared response types]
-    Types --> UI[Svelte components]
-```
+Published JSON and images in `content/reviews/` → content validation and image checks → build-time loaders → prerendered HTML and page data → browser hydration and local interactions.
 
-## Boundaries
+`ReviewContent` is the editable JSON interface. `PublicReview` adds a calculated rating. There are no database identifiers, publication statuses, users, or change logs in public content. Review files own authored timestamps and credits; soda posts may contain independently authored entries in `reviews`; Git owns version history. Optional saved coordinates determine map inclusion.
 
-- [src/lib/server/reviews/](../src/lib/server/reviews/) contains review rules and create/edit workflows. `production.ts`
-  supplies common write dependencies, while each route supplies its operation-specific database
-  callbacks. Page loads continue to query their collections directly.
-- [src/lib/server/map/](../src/lib/server/map/) separates address matching, Nominatim transport, geocode storage,
-  marker assembly, and coordination. `review-map.ts` composes one production instance.
-- [src/lib/server/review-requests/](../src/lib/server/review-requests/) separates request validation, delivery, rate-limit policy,
-  and the submission workflow. The `/about` route keeps origin checks, parsing, and HTTP responses.
-- [src/lib/server/login/](../src/lib/server/login/) owns credential verification and the dependency-free password policy.
-  The login route owns rate-limit order, auditing, sessions, and cookies.
-- [src/lib/types/](../src/lib/types/) contains shared data contracts. `BarReviewUpdate` allows only editable
-  review fields, an optional replacement image, and the update time. Publication has a separate
-  update contract.
-- [src/lib/components/review-form/](../src/lib/components/review-form/) owns the individual beer, author, rating, and image controls.
-  The parent owns submission, initial/restored values, and error focus. Image object URLs belong
-  to the image picker and are revoked when replaced or destroyed.
-- [src/lib/components/review-map/](../src/lib/components/review-map/) owns marker and browser-location lifetimes. The parent keeps
-  MapLibre initialization, worker setup, selection state, visible feedback, and disposal.
+The `/skapa/` route generates one review JSON and a separate compressed WebP (at most 1,600 pixels and 500 KiB, with original metadata removed) entirely in the browser. Each review has its own author, text, timestamps, favorite status, repurchase potential, price, ratings, volume, container, image and stable slug. Different authors reviewing the same soda publish separate posts. Nested review arrays are rejected by the public field allowlist; there is no automatic conversion. The generator suggests new slugs from title and author and edits existing soda reviews without changing their slug or creation date; an unmodified image is retained and a replacement gets a new WebP filename. It exposes a single purchase price. Review images live in `content/reviews/images/`; a prerendered image endpoint publishes only validated, referenced images at the existing `/images/<filename>` URLs. The generator uses the same 16:9 image component as review pages and exports adjustable horizontal/vertical focus percentages and an optional `imageZoom` multiplier (1–3, default 1) for both review pages and cards, including edits to existing images. Images scale around the saved focus point inside an overflow-clipped 16:9 frame; zoom does not alter image bytes. A JSON import button loads saved soda reviews through the shared validator, preserving their slug, image filename and creation date; invalid imports retain the current form. Published reviews can also be selected directly. The export runs the shared content validator; browser form state is transient.
 
-Small cohesive modules such as publication, auditing, image processing, and the two rate limiters
-remain separate. Their distinct policies are not combined into a general-purpose framework.
+Soda ratings use weights in `lib/review-metadata.ts` and scoring in `lib/content/soda.ts`: sweetness is transformed to balance with an ideal of 3; runniness is descriptive while `mouthfeelMatch` rates suitability. Apply the existing 0–3 thresholds to each review's own score. Legacy soda entries without suitability retain their original five-score average. Reviewer filtering uses normalized names and a shareable homepage query parameter. Detail pages show the selected post's own scores, favorite status and repurchase potential. Optional validated `sodaId` explicitly links independent soda posts; `lib/content/related.ts` finds peers with the same ID, excludes the current slug, and sorts by author then newest date. Titles never imply identity. The route loader emits lightweight peer metadata, and prerendered links respect the base path and trailing slash. The generator defaults `sodaId` to the normalized drink title, excluding the author and bounded to 100 characters. Clearing an override restores that default. It preserves existing explicit IDs during title edits, and offers existing soda IDs or custom overrides while keeping price and scores independent. Missing IDs in imports receive the default on export; published JSON is not inferred at read time. Optional venue ratings remain separate from the soda score.
 
-## Request flows
+Container and volume have independent dropdowns; common volumes live in `DRINK_VOLUMES_ML`, with custom values entered in ml. `container: "Annan"` requires a validated `customContainer` label rendered as escaped text. Combined container values are rejected. LPK in `lib/utils/drink-facts.ts` uses the review's explicit `volumeMl` and single `beerPriceKr`; unknown quantities hide LPK. Energy drinks require either `caffeineMgPer100Ml` or `caffeineMgPerContainer`. Carbohydrate and protein fields likewise accept `GPer100Ml` or `GPerContainer` (one basis per nutrient). `nutrientAmounts` derives the other basis only with an explicit volume; imported JSON preserves the entered basis. The generator converts units when volume is known and clears the value on a basis switch without volume. KPL/PPL refer to carbohydrate/protein totals for that volume. `isEnergyDrink`, `isProteinDrink`, the manual `isElectrolyteDrink` flag and explicit `sugarType` combine independently in home filters; published classifications remain explicit; `suggestDrinkTypes` offers editable generator defaults from positive caffeine/protein/carbohydrates and zero carbohydrates. Overrides and existing explicit classifications take priority; changing units does not change classifications. Clearing inputs updates automatic defaults. Serving metadata (`servingMethods`, `servingTemperature`, `servedWithIce`) stays optional, independent of packaging and scores. Serving methods are a unique allowlisted array; temperature and ice remain unknown when omitted. The generator preserves them through imports/exports and review pages display them. Cards omit caffeine and align types with the author baseline. Card types share the author row and nutrients use the existing brand/price panel with reduced padding; images retain their full area and card height stays compact. These facts do not change scores. The validator continues to support legacy bar ratings and rejects mixed formats.
 
-### Create and edit
+The root layout prerenders with trailing slashes. Dynamic review/history routes enumerate all content slugs. History pages redirect through HTML to the GitHub file history. Unknown requests use the generated styled `404.html`. All links/assets respect the configured base path.
 
-The route authenticates, records the attempt, parses multipart data, and invokes the relevant
-workflow. Workflows accept `FormData`, editor context, and narrow dependencies; they return
-`ReviewWriteResult`. Only routes and the response adapter use SvelteKit `fail` or redirects.
+## Rules and tests
 
-Both flows validate fields, validate selected authors, check slug collisions, process an image,
-and persist. Create validates ratings before detail fields, requires an image, and inserts a
-draft. Edit first verifies the submitted ID against the route slug, validates details before
-ratings, permits no replacement image, records changes, and preserves publication status.
+| Rule                                                                     | Owner                                          | Verification                                      |
+| ------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------- |
+| Public JSON fields, ratings, paths, dates, coordinates                   | `lib/content/validation.ts`                    | `validation.test.ts`                              |
+| Only public legacy records and allowlisted export fields                 | `tools/migration/projection.ts`                | `validation.test.ts`                              |
+| Image signatures, missing/unreferenced images, symlinks, duplicate slugs | `lib/server/content.ts`                        | `content.test.ts`                                 |
+| Statistics, price ties, missing coordinates                              | `lib/content/derived.ts`                       | `derived.test.ts`                                 |
+| Markdown HTML escaping                                                   | `lib/utils/review-markdown.ts`                 | Adjacent unit tests                               |
+| Search URLs, static navigation, detail/images/history, privacy           | Public routes/components                       | `tests/static-site.test.ts`                       |
+| Map workers, markers, acceptance lifecycle                               | `components/review-map` and `ReviewMap.svelte` | Browser map scenarios                             |
+| Frozen installs, lifecycle decisions, release delay                      | pnpm configuration                             | Clean install and CI                              |
+| SHA-pinned Actions, build/deploy privilege separation                    | `.github/workflows`                            | Workflow configuration tests and repository rules |
 
-An insert/update failure cleans up only the new upload. Both proactive slug checks and MongoDB
-code `11000` retain their existing responses. Successful public edits invalidate the public caches;
-draft writes do not. Audits remain next to their original decision points, with unchanged event
-names, reasons, and order. Audit storage errors never break a request.
+## External dependencies and trust
 
-### Publication
+OpenFreeMap supplies map style/tiles only after the visitor accepts the overlay on the map page. The map never requests browser location; acceptance stays in component memory and resets when leaving the page. The site uses no analytics scripts, analytics cookies, or consent banner. Review content and code are deployed together after repository review. CI builds untrusted PRs without write credentials; only main-branch builds upload a Pages artifact. The privileged deploy job runs no source-controlled scripts.
 
-The detail-page action uses only the route slug. `publishDraftReview` checks the draft's previous
-status and update time in the atomic write. It records the publisher in history without changing
-credited authors. A successful publication invalidates both public caches; conflicts retain their
-existing HTTP responses. Missing publication status remains public for legacy records.
+Migration credentials exist only in a local, separately installed tool. Normal builds need no secrets and can run with an empty review collection. Static CSP uses hashes; Pages response headers differ from the retired Node deployment. See README for repository settings and cutover requirements.
 
-### Public map and statistics
-
-Each production cache is created once per Node process with `createAsyncCache`. Concurrent reads
-share pending work. Invalidating a cache advances its generation, so older work can finish for its
-original caller but cannot refill the cache or clear a newer pending request. Failed reads can be
-retried. The TTL starts when loading finishes.
-
-Marker-list loading queries only public reviews and persisted resolved geocodes. It never calls
-Nominatim. The authenticated, same-origin next-marker endpoint asks the map service for at most one
-address attempt. Concurrent geocoding calls return no marker while another attempt is active;
-they do not share the first call's result. Exact and fallback requests use the same Nominatim
-client and timing state. Resolved geocodes remain permanent.
-
-### Review requests and login
-
-The review-request route checks origin and parses data. The workflow handles the honeypot,
-validation, IP limit, global delivery limit, delivery, and auditing in their existing order.
-It returns response data and an optional retry delay; the route writes the `Retry-After` header.
-Delivery uses mocked HTTP in tests and never a real Discord webhook.
-
-Login consumes IP and username rate limits before calling `verifyLoginCredentials`. Unknown
-usernames still incur Argon2 hashing. The app and user-creation script import the same ESM policy;
-the Docker runtime explicitly includes it for the standalone script. Passwords and request content
-are not added to audit events. Login and review-request rate limits retain different algorithms
-and failure behavior.
-
-## Rule-to-test index
-
-Paths below are relative to the repository root. Unit tests live beside the modules they cover.
-
-| Rule or behavior                                         | Implementation owner                                                                                                                                         | Regression coverage                                                                                                                                                                                                               |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rating metadata and weighting                            | [src/lib/review-metadata.ts](../src/lib/review-metadata.ts), [src/lib/utils/ratings.ts](../src/lib/utils/ratings.ts)                                         | [src/lib/utils/ratings.test.ts](../src/lib/utils/ratings.test.ts), [src/lib/server/reviews/form.test.ts](../src/lib/server/reviews/form.test.ts)                                                                                  |
-| Text normalization and distinct slug policies            | [src/lib/utils/review-text.ts](../src/lib/utils/review-text.ts), [src/lib/utils/slug.ts](../src/lib/utils/slug.ts)                                           | Adjacent text and slug tests                                                                                                                                                                                                      |
-| Validation order and restored form values                | [src/lib/server/reviews/form.ts](../src/lib/server/reviews/form.ts), [src/lib/utils/review-form.ts](../src/lib/utils/review-form.ts)                         | Adjacent tests, [src/routes/review-actions.test.ts](../src/routes/review-actions.test.ts)                                                                                                                                         |
-| Selected authors and existing credits                    | [src/lib/server/reviews/authorship.ts](../src/lib/server/reviews/authorship.ts)                                                                              | Adjacent tests, [tests/review-authorship.test.ts](../tests/review-authorship.test.ts)                                                                                                                                             |
-| Editable fields and history                              | [src/lib/server/reviews/persistence.ts](../src/lib/server/reviews/persistence.ts), [src/lib/server/reviews/history.ts](../src/lib/server/reviews/history.ts) | Adjacent tests                                                                                                                                                                                                                    |
-| Write failures, image cleanup, status preservation       | [src/lib/server/reviews/create.ts](../src/lib/server/reviews/create.ts), [src/lib/server/reviews/edit.ts](../src/lib/server/reviews/edit.ts)                 | [src/lib/server/reviews/workflows.test.ts](../src/lib/server/reviews/workflows.test.ts), [src/routes/review-actions.test.ts](../src/routes/review-actions.test.ts), [tests/draft-reviews.test.ts](../tests/draft-reviews.test.ts) |
-| Visibility and atomic publication                        | [src/lib/server/review-publication.ts](../src/lib/server/review-publication.ts)                                                                              | Adjacent tests, [tests/draft-reviews.test.ts](../tests/draft-reviews.test.ts)                                                                                                                                                     |
-| Image signatures, metadata removal, directories          | [src/lib/server/review-images.ts](../src/lib/server/review-images.ts)                                                                                        | Adjacent tests; draft/public access in browser publication tests                                                                                                                                                                  |
-| Cache expiry, concurrency, stale results, retries        | [src/lib/server/async-cache.ts](../src/lib/server/async-cache.ts)                                                                                            | Adjacent tests, statistics and map service tests                                                                                                                                                                                  |
-| Strict public queries and geocoding policy               | [src/lib/server/map/](../src/lib/server/map/)                                                                                                                | [src/lib/server/map/service.test.ts](../src/lib/server/map/service.test.ts)                                                                                                                                                       |
-| Marker selection, prices, keyboard use, location cleanup | [src/lib/components/ReviewMap.svelte](../src/lib/components/ReviewMap.svelte), `review-map/`                                                                 | [tests/review-map.test.ts](../tests/review-map.test.ts)                                                                                                                                                                           |
-| Login verification and shared hashing policy             | [src/lib/server/login/](../src/lib/server/login/)                                                                                                            | `credentials.test.ts`, login through browser review tests                                                                                                                                                                         |
-| Origin, honeypot, rate limits, request delivery failures | [src/lib/server/review-requests/](../src/lib/server/review-requests/), `/about` action                                                                       | Adjacent validation/delivery tests, [src/routes/about/page.server.test.ts](../src/routes/about/page.server.test.ts), [tests/review-request.test.ts](../tests/review-request.test.ts)                                              |
-| Audit failures and trusted proxy handling                | [src/lib/server/audit.ts](../src/lib/server/audit.ts), `request.ts`                                                                                          | Adjacent tests                                                                                                                                                                                                                    |
-
-## Verification and safe extension
-
-Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint` for a change. Run
-`npm run test:integration` for routes, UI, authentication, and workflows. Its managed web server
-also builds the app. Run `npm run build` for final production verification.
-
-Browser feature specs share a worker-scoped MongoDB fixture and run with one worker because the
-app has process caches and shared rate limits. Use a development/test database: the existing
-fixture temporarily clears login limits and restores them on cleanup. Browser helpers live under
-[tests/fixtures/](../tests/fixtures/); a spec should import only the fixtures it needs.
-
-Add rules to their owning module and tests, then update this index when ownership changes. Keep
-runtime dependencies out of pure rules. Factories and dependency objects provide test seams;
-there is no dependency-injection container or generic repository hierarchy.
+Favorites use the optional `favorite` boolean; legacy `recommended` remains valid content but is not displayed or counted as a favorite. The optional integer `repurchasePotential` (0–5) is separate from weighted soda ratings. Labels live in `lib/review-metadata.ts`; missing assessments are excluded from statistics. Neither field changes the overall score.

@@ -12,7 +12,3 @@ export const stripControlCharacters = (value: string): string => {
 export const sanitizePlainText = (value: string): string => {
 	return stripControlCharacters(value).replace(/\s+/g, ' ').trim();
 };
-
-export const sanitizeLongText = (value: string): string => {
-	return stripControlCharacters(value).trim();
-};

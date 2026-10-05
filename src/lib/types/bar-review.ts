@@ -1,5 +1,6 @@
-import type { ReviewPersistenceFields } from './review-form';
-import type { ObjectId } from 'mongodb';
+import type { DRINK_CONTAINERS, SERVING_METHODS, SERVING_TEMPERATURES } from '../review-metadata';
+
+export type DrinkContainer = (typeof DRINK_CONTAINERS)[number];
 
 export type ReviewRatingKey =
 	| 'atmosphere'
@@ -13,78 +14,67 @@ export type ReviewRatingKey =
 
 export type ReviewRatingValues = Record<ReviewRatingKey, number>;
 
-export type ReviewPublicationStatus = 'draft' | 'published';
+/** Public repository content. Never put private drafts or credentials here. */
+export type SodaRatingKey =
+	| 'taste'
+	| 'sweetness'
+	| 'carbonation'
+	| 'mouthfeel'
+	| 'drinkability'
+	| 'matchesName'
+	| 'value';
+export type SodaRatingValues = Record<SodaRatingKey, number> & { mouthfeelMatch?: number };
+export type VenueRatingKey = 'atmosphere' | 'service' | 'selection' | 'cleanliness' | 'soundLevel';
+export type VenueRatingValues = Record<VenueRatingKey, number>;
 
-export interface ReviewFieldChange {
-	field: string;
-	label: string;
-	before: string;
-	after: string;
+export interface DrinkFacts {
+	servingMethods?: (typeof SERVING_METHODS)[number][];
+	servingTemperature?: (typeof SERVING_TEMPERATURES)[number];
+	servedWithIce?: boolean;
+	isEnergyDrink?: boolean;
+	isProteinDrink?: boolean;
+	isElectrolyteDrink?: boolean;
+	sugarType?: 'sugar-free' | 'sugared';
+	caffeineMgPer100Ml?: number;
+	caffeineMgPerContainer?: number;
+	carbohydrateGPer100Ml?: number;
+	carbohydrateGPerContainer?: number;
+	proteinGPer100Ml?: number;
+	proteinGPerContainer?: number;
+	container?: DrinkContainer;
+	customContainer?: string;
+	volumeMl?: number;
+	beerPriceKr?: number;
 }
 
-export interface ReviewChangeLogEntry {
-	updatedAt: Date;
-	updatedBy: string;
-	changes: ReviewFieldChange[];
-}
-
-export interface BarReview extends ReviewRatingValues {
-	_id: ObjectId;
+export interface ReviewContent extends Partial<ReviewRatingValues>, DrinkFacts {
+	sodaId?: string;
+	/** Legacy recommendation; never treated as a favorite. */
+	recommended?: boolean;
+	favorite?: boolean;
+	repurchasePotential?: number;
+	sodaRatings?: SodaRatingValues;
+	venueRatings?: VenueRatingValues;
 	title: string;
 	description: string;
-
-	// overall rating: 0–3
-	rating: number;
-
+	slug: string;
 	image: string;
 	imageFocusX?: number;
 	imageFocusY?: number;
+	imageZoom?: number;
 	location: string;
-	slug: string;
 	beerBrand?: string;
-	beerPriceKr?: number;
 	isHappyHourPrice?: boolean;
-
-	author: string; // primary author chosen from the form's selected authors
-	coAuthors?: string[]; // array of usernames of other contributors
-	// Missing on legacy reviews, which are treated as published.
-	publicationStatus?: ReviewPublicationStatus;
-	changeLog?: ReviewChangeLogEntry[];
-
-	createdAt: Date;
-	updatedAt: Date;
+	author: string;
+	coAuthors?: string[];
+	createdAt: string;
+	updatedAt: string;
+	latitude?: number;
+	longitude?: number;
 }
 
-// Serialized version with _id as string (for client-side)
-export interface SerializedBarReview extends Omit<BarReview, '_id' | 'createdAt' | 'updatedAt'> {
-	_id: string;
-	createdAt: Date | string;
-	updatedAt: Date | string;
-}
-
-// Form data structure for validation errors
-export interface BarReviewFormData extends ReviewRatingValues {
-	barName: string;
+export interface PublicReview extends ReviewContent {
+	author: string;
 	description: string;
-	address: string;
-	slug: string;
-	beerBrandSelection: string;
-	customBeerBrand: string;
-	beerPriceKr: number;
-	isHappyHourPrice: boolean;
-	authors: string[];
-	imageFocusX: number;
-	imageFocusY: number;
 	rating: number;
 }
-
-export interface ReviewFormActionData extends Partial<BarReviewFormData> {
-	pointer?: string;
-	message?: string;
-}
-
-// Form-editable fields only; publication and history have separate write contracts.
-export type BarReviewUpdate = ReviewPersistenceFields &
-	Pick<Partial<BarReview>, 'image'> & {
-		updatedAt: Date;
-	};

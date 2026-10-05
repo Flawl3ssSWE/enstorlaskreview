@@ -1,0 +1,1 @@
+Published review JSON belongs here, with its referenced images in `images/`. Add each JSON and image together in this folder tree. See the repository README for editing and migration instructions. Keep private drafts outside this repository.

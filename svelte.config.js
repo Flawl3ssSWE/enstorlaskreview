@@ -1,4 +1,5 @@
-import adapter from '@sveltejs/adapter-node';
+import adapter from '@sveltejs/adapter-static';
+import { readdirSync } from 'node:fs';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,42 +9,38 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// This project is configured to use @sveltejs/adapter-node, which runs your app on a Node server.
-		// To use a different adapter (for serverless, edge, etc.), switch out the adapter import and configuration.
-		// See https://kit.svelte.dev/docs/adapters for more information about available adapters.
-		adapter: adapter({
-			precompress: false,
-			envPrefix: '',
-			polyfill: true
-		}),
+		adapter: adapter({ strict: true }),
+		paths: { base: process.env.BASE_PATH ?? '', relative: false },
+		files: { assets: process.env.REVIEW_STATIC_DIR ?? 'static' },
+		prerender: {
+			handleUnseenRoutes: ({ routes }) => {
+				const isEmpty = !readdirSync(process.env.REVIEW_CONTENT_DIR ?? 'content/reviews').some(
+					(name) => name.endsWith('.json')
+				);
+				if (
+					!isEmpty ||
+					routes.some(
+						(route) => !['/[slug]', '/[slug]/history', '/images/[filename]'].includes(route)
+					)
+				) {
+					throw new Error(`Routes were not prerendered: ${routes.join(', ')}`);
+				}
+			}
+		},
 		csp: {
-			mode: 'nonce',
+			mode: 'hash',
 			directives: {
 				'default-src': ['self'],
-				'img-src': [
-					'self',
-					'data:',
-					'blob:',
-					'https://tiles.openfreemap.org',
-					'https://www.google-analytics.com',
-					'https://www.googletagmanager.com'
-				],
-				'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
-				'script-src': ['self', 'https://www.googletagmanager.com'],
-				'script-src-attr': ['unsafe-inline'],
-				'connect-src': [
-					'self',
-					'https://tiles.openfreemap.org',
-					'https://www.google-analytics.com',
-					'https://region1.google-analytics.com',
-					'https://www.googletagmanager.com'
-				],
-				'font-src': ['self', 'https://fonts.gstatic.com'],
+				'img-src': ['self', 'data:', 'blob:', 'https://tiles.openfreemap.org'],
+				'style-src': ['self', 'unsafe-inline'],
+				'script-src': ['self'],
+				'connect-src': ['self', 'https://tiles.openfreemap.org'],
+				'font-src': ['self'],
 				'worker-src': ['self', 'blob:'],
 				'child-src': ['self', 'blob:'],
 				'base-uri': ['self'],
 				'form-action': ['self'],
-				'frame-ancestors': ['none']
+				'object-src': ['none']
 			}
 		}
 	}

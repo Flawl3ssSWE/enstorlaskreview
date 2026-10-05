@@ -1,0 +1,29 @@
+{
+	"title": "Hallonsoda",
+	"description": "**En testrecension**, inte en verklig bar.",
+	"slug": "hallonsoda",
+	"image": "test-bar.png",
+	"location": "",
+	"author": "test",
+	"coAuthors": ["sara"],
+	"createdAt": "2025-01-01T12:00:00.000Z",
+	"updatedAt": "2025-01-02T12:00:00.000Z",
+	"beerBrand": "Testläsk",
+	"beerPriceKr": 25,
+	"sodaRatings": {
+		"taste": 4,
+		"sweetness": 4,
+		"carbonation": 4,
+		"mouthfeel": 4,
+		"drinkability": 4,
+		"matchesName": 4,
+		"value": 4
+	},
+	"venueRatings": {
+		"atmosphere": 1,
+		"service": 1,
+		"selection": 1,
+		"cleanliness": 1,
+		"soundLevel": 1
+	}
+}

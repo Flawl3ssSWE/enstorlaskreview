@@ -1,0 +1,22 @@
+{
+	"title": "Andra testbaren",
+	"description": "**En testrecension**, inte en verklig bar.",
+	"slug": "andra-testbaren",
+	"image": "test-bar.png",
+	"location": "Testgatan 1, Göteborg",
+	"author": "test",
+	"coAuthors": ["sara"],
+	"createdAt": "2025-02-01T12:00:00.000Z",
+	"updatedAt": "2025-02-01T12:00:00.000Z",
+	"beerBrand": "Pripps Blå",
+	"beerPriceKr": 75,
+	"isHappyHourPrice": false,
+	"atmosphere": 4,
+	"service": 4,
+	"selection": 4,
+	"quality": 4,
+	"price": 4,
+	"cleanliness": 4,
+	"soundLevel": 4,
+	"barhopPotential": 4
+}

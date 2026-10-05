@@ -1,43 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @theme {
 	--color-primary-gray: oklch(0.19 0.0026 247.96);
 	--color-nav-gray: oklch(0.26 0.0119 248.29);
-	--color-cream: oklch(0.97 0.02 90);
-	--color-ink: oklch(0.24 0.03 255);
-	--color-ember: oklch(0.58 0.16 255);
-	--color-clay: oklch(0.84 0.04 245);
-	--color-moss: oklch(0.5 0.09 210);
-	--color-char: oklch(0.32 0.03 250);
+	--color-cream: oklch(0.98 0.012 85);
+	--color-ink: #f4f1ee;
+	--color-secondary: #c6c1bd;
+	--color-muted: #a9a29e;
+	--color-surface: #1d1b1c;
+	--color-surface-raised: #292526;
+	--color-line: #423a3c;
+	--color-accent: #fca5a5;
+	--color-ember: #b91c1c;
+	--color-clay: oklch(0.9 0.045 20);
+	--color-moss: oklch(0.5 0.09 165);
+	--color-char: oklch(0.32 0.015 25);
 	--font-sans: 'IBM Plex Sans', sans-serif;
 	--font-serif: 'Archivo', sans-serif;
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
 	*,
 	::after,
 	::before,
 	::backdrop,
 	::file-selector-button {
-		border-color: var(--color-gray-200, currentColor);
+		border-color: var(--color-line);
+	}
+
+	:root {
+		color-scheme: dark;
+		background-color: #121112;
 	}
 
 	body {
 		font-family: var(--font-sans);
 		color: var(--color-ink);
 		background:
-			radial-gradient(900px 500px at 10% -10%, oklch(0.98 0.05 80), transparent 60%),
-			radial-gradient(700px 500px at 110% 10%, oklch(0.97 0.06 40), transparent 60%),
-			linear-gradient(180deg, oklch(0.98 0.02 90), oklch(0.95 0.03 75));
+			radial-gradient(900px 500px at 10% -10%, #452023, transparent 60%),
+			radial-gradient(700px 500px at 110% 10%, #301d24, transparent 60%),
+			linear-gradient(180deg, #171415, #121112);
 		min-height: 100vh;
 	}
 
@@ -55,120 +57,6 @@
 	}
 
 	a:hover {
-		color: var(--color-ember);
+		color: var(--color-accent);
 	}
 }
-
-/* :root {
-	--font-body: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-		Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-	--font-mono: 'Fira Mono', monospace;
-	--color-bg-0: rgb(19, 20, 21);
-	--color-bg-1: hsl(210, 14%, 14%);
-	--color-bg-2: hsl(227, 31%, 11%);
-	--color-theme-1: #ff3e00;
-	--color-theme-2: #4075a6;
-	--color-text: rgba(255, 255, 255, 0.7);
-	--column-width: 42rem;
-	--column-margin-top: 4rem;
-	font-family: var(--font-body);
-	color: var(--color-text);
-}
-
-* {
-	box-sizing: border-box;
-	margin: 0;
-	padding: 0;
-}
-
-html,
-body,
-main {
-	height: 100%;
-	width: 100%;
-}
-
-main {
-	overflow: auto;
-}
-
-body {
-	margin: 0;
-	background-color: var(--color-bg-0);
-}
-
-h1,
-h2,
-p {
-	font-weight: 400;
-}
-
-p {
-	line-height: 1.5;
-}
-
-a {
-	color: var(--color-theme-1);
-	text-decoration: none;
-}
-
-a:hover {
-	text-decoration: underline;
-}
-
-h1 {
-	font-size: 2rem;
-	text-align: center;
-}
-
-h2 {
-	font-size: 1rem;
-}
-
-pre {
-	font-size: 16px;
-	font-family: var(--font-mono);
-	background-color: rgba(255, 255, 255, 0.45);
-	border-radius: 3px;
-	box-shadow: 2px 2px 6px rgb(255 255 255 / 25%);
-	padding: 0.5em;
-	overflow-x: auto;
-	color: var(--color-text);
-}
-
-.text-column {
-	display: flex;
-	max-width: 48rem;
-	flex: 0.6;
-	flex-direction: column;
-	justify-content: center;
-	margin: 0 auto;
-}
-
-input,
-button {
-	font-size: inherit;
-	font-family: inherit;
-}
-
-button:focus:not(:focus-visible) {
-	outline: none;
-}
-
-@media (min-width: 720px) {
-	h1 {
-		font-size: 2.4rem;
-	}
-}
-
-.visually-hidden {
-	border: 0;
-	clip: rect(0 0 0 0);
-	height: auto;
-	margin: 0;
-	overflow: hidden;
-	padding: 0;
-	position: absolute;
-	width: 1px;
-	white-space: nowrap;
-} */

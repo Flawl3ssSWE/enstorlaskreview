@@ -37,7 +37,7 @@
 		<Search
 			size={20}
 			strokeWidth={1.5}
-			class="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-slate-500"
+			class="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-muted"
 			aria-hidden="true"
 		/>
 		<input
@@ -47,8 +47,8 @@
 			bind:this={searchInput}
 			value={inputValue}
 			oninput={handleInput}
-			placeholder="Sök bar, stadsdel eller känsla"
-			class="h-11 w-full rounded-2xl border border-white/95 bg-white/90 pl-11 pr-4 text-sm text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none backdrop-blur-md focus:ring-2 focus:ring-sky-200"
+			placeholder="Sök läsk, märke eller smak"
+			class="h-11 w-full rounded-2xl border border-line bg-surface-raised pl-11 pr-4 text-sm text-ink placeholder:text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none backdrop-blur-md focus:ring-2 focus:ring-red-300"
 		/>
 	</div>
 </form>

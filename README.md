@@ -1,399 +1,108 @@
-# Bar Review Application
+# En Stor Läsk Review
 
-A collaborative bar review platform where users can create and share reviews of bars. All users
-who are created in the system can log in, create private drafts, and edit or publish reviews.
-Anonymous visitors see only published reviews, the public map at `/karta`, and the public
-statistics page at `/statistik`.
+A Swedish soda review guide built with SvelteKit, TypeScript, Tailwind CSS, and MapLibre. GitHub Pages serves prerendered pages; there is no application server, database, login, or server-side editor. A browser form generates review files locally.
 
-## Setup
+## Development
 
-Two ways to run the app locally. Either way the site ends up on <http://localhost:5173>
-with a MongoDB seeded with demo users, so you can log in as `test` / `testpass123` right
-away.
+Use Node **24.16.0** (see `.node-version`) and **pnpm 12.8.1** (pinned in `package.json`). Install pnpm through its official installation instructions: https://pnpm.io/installation.
 
-### Everything in Docker
-
-Needs only Docker. No Node.js and no `.env`:
-
-```bash
-make dev
+```sh
+pnpm install --frozen-lockfile
+pnpm dev
+pnpm validate:content
+pnpm check
+pnpm lint
+pnpm test:unit --run
+pnpm exec playwright install chromium
+pnpm test:integration
+pnpm build
+pnpm preview
 ```
 
-Editing a file reloads the browser. `make dev-down` stops it, and `make help` lists the
-rest: reset the database, run the tests, open a shell, create a user.
+Playwright builds only clearly labelled test reviews in a temporary asset directory. Run `pnpm build` afterward to restore the production build from `content/reviews` and `content/reviews/images`. No `.env` or MongoDB is required.
 
-Without `make`, the command is `docker compose -f docker-compose.dev.yml up --build`.
+## Add or edit a review
 
-### On your machine
+Open `/skapa/` directly (the generator is not linked in the public navigation) to generate one soda review locally. Fill in the soda name, author, free text, image, eight scores (0–5, half points allowed), favorite status, and optionally repurchase potential (0–5, whole points) and the price you paid. The form previews the total rating (0–3) and weighted score (0–5) as you edit; it uses the same calculation as the published review. Empty or out-of-range scores hide the preview, and venue scores do not affect it. Each reviewer publishes their own JSON file, slug, image, text, scores, price, container, volume, and dates, even when reviewing the same soda. New slugs are suggested from the soda name and author; change the slug if needed to distinguish multiple reviews by the same author. Download both files, then place the JSON in `content/reviews/` and the WebP in `content/reviews/images/`. The form removes original image metadata (including EXIF/GPS), resizes images to at most 1,600 pixels, and compresses them to WebP at quality 82%, reducing quality and dimensions further if needed to stay within 500 KiB. The resulting size is shown before download. Adjust zoom (100–300%) and horizontal/vertical image position in the 16:9 preview to choose the crop shown on review pages and cards. Positioning also works when editing an existing image; the focus percentages and optional `imageZoom` multiplier (1–3, default 1) are saved in JSON. Zoom only changes the displayed crop; the downloaded image remains full-sized. Nothing is uploaded or saved between visits.
 
-Needs Node.js `^20.19.0 || >=22.12.0`, plus Docker for the database. The app refuses to
-start without `MONGO_URI`, so create a `.env` file first (it is gitignored):
+See [the soda JSON example](docs/soda-review-example.json); replace all example content before publishing. All fields belong directly to the review object. Nested `reviews` arrays are rejected; there are no shared product prices or combined reviewer ratings. To edit a review, use **Ladda in recension från JSON** beneath the generator heading to load its saved `<slug>.json`, or select a published review with **Redigera en befintlig recension**. The JSON import runs the shared validator and accepts soda reviews up to 256 KiB. Invalid files leave the current form intact. Edit the populated form and replace the review’s JSON file with the downloaded version. **Skapa ny recension** clears the loaded review. If an imported image is not on the site, select its image file to preview it; the existing filename can still be retained when exporting JSON. Its slug and creation date are retained, along with its image when no replacement is selected. Replacement images get a new WebP filename; remove the old image if no review references it. A new image download is only necessary when replacing the image.
 
-```
-MONGO_URI=mongodb://localhost:27017/enstorstark
-```
+To link independent reviews of the same soda, give them the same optional `sodaId`, for example `pepsi-max-tropical`. IDs contain lowercase a–z, digits, and single separating hyphens, up to 100 characters. The generator automatically creates a soda ID from the drink title, excluding the author, and limits this default to 100 characters. It lets you select a previously reviewed soda or enter a name or ID instead. Clearing a custom ID restores the automatic title-based value. Imported reviews without an ID receive this default when exported. Typed names are formatted into lowercase IDs with hyphens, and the form previews exactly which ID will be saved. Existing valid IDs remain unchanged; published JSON is still validated strictly. Selecting a soda fills its title and brand; your author, price, text, image and scores stay independent. Editing preserves the ID. Detail pages list other reviews with the exact same ID, showing their authors and own scores. Different titles may share an ID; matching titles alone never create links. Reviews without an ID remain valid and unlinked. IDs do not change public review slugs.
 
-Then:
+The optional `container` records what the reviewer drank from. Choose `Burk`, `Flaska`, `Glasflaska`, `SodaStream smak`, `Sprutmaskin`, or `Annan`. Choosing `Annan` requires a separate `customContainer` label of 1–80 characters without surrounding whitespace or control characters; other container types must omit that field. Choose volume separately; `volumeMl` is stored in ml, for example `330` for 33 cl or `1500` for 1.5 l. Choose **Annan volym** to enter a positive volume in ml, including decimals. Existing unusual volumes open in that input when editing. Either field may be omitted when unknown. Combined container values (such as `Burk 33cl`) are rejected. There is no automatic conversion.
 
-```bash
-npm install
-npm run db:all   # MongoDB in Docker, seeded with the demo users
-npm run dev
-```
+Soda ratings are `taste`, `sweetness`, `carbonation`, `mouthfeel`, `mouthfeelMatch`, `drinkability`, `matchesName`, and `value`. Sweetness measures intensity (0 = not sweet, 3 = perfect, 5 = too sweet). Its balance rises linearly from 0 at intensity 0 to 5 at intensity 3, then falls linearly to 0 at intensity 5. Consistency measures runniness (0 = thick, 5 = very runny); only `mouthfeelMatch` affects quality. Weights: taste 30%; sweetness balance, carbonation, and drinkability 15% each; consistency suitability and matching the name 10% each; value 5%. Apply the 0–3 thresholds (2, 3.25, 4.5) to each review's own precise score. Recommendations are explicit choices independent of the numeric score.
 
-The review-request form on `/about` does not need a Discord webhook during development. Without
-one, validated requests use a local sink that sends no network request and stores no form content.
-Set `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` to the development-channel webhook when you want to test
-real Discord delivery.
+LPK (läsk per krona) is volume divided by the review's own price, displayed in cl/kr. Optional `volumeMl` supplies volume (use the finished drink for SodaStream or fountain soda), and optional `beerPriceKr` supplies the purchase price. Missing volume or price hides LPK. These facts do not affect ratings.
 
-`npm run dev` starts only the native Vite process; it does not start MongoDB. If it reports
-`ECONNREFUSED 127.0.0.1:27017`, run `npm run db:all` first and leave that database container
-running.
+Set `isEnergyDrink: true` for an energy drink and supply either `caffeineMgPer100Ml` or `caffeineMgPerContainer` from the label. Optional carbohydrates use `carbohydrateGPer100Ml` or `carbohydrateGPerContainer`; protein uses `proteinGPer100Ml` or `proteinGPerContainer`. Enter only one basis per nutrient, with finite nonnegative values (zero is known; omission means unknown). The generator lets you choose either basis and converts when `volumeMl` is known. Without a volume, switching basis clears the input; the site displays only the supplied basis. KPL (kolhydrat per läsk) and PPL (protein per läsk) show totals for the reviewed volume. Use `isElectrolyteDrink: true` for an electrolyte drink (a manual choice according to the label, combinable with the other types and filterable with `drinkType=electrolyte`), `isProteinDrink: true` and `sugarType: "sugar-free"` or `"sugared"` according to the label; published sugar type remains explicit. In the generator, positive caffeine/protein suggest energy/protein classifications, positive carbohydrates suggest Sockrad and zero carbohydrates suggest Sockerfri. Suggestions work in either nutrient basis and update when values are cleared. Users can override them (e.g. caffeinated cola or non-sugar carbohydrates) and restore automatic choices. Existing explicit classifications are preserved on import; false energy/protein overrides are exported as false. Home filters combine these types with AND and preserve them as repeated `drinkType` URL parameters. Optional `servingMethods` accepts multiple unique choices: `Originalförpackning`, `Glas`, `Sugrör`, `Mugg`. Packaging records what the drink was sold in; serving records how it was consumed. Optional `servingTemperature` accepts `Kylskåpskall`, `Rumstempererad`, `Varm`; `servedWithIce` is a boolean (omit when unknown). These appear on the review page and do not change ratings. Cards omit caffeine. Card types share the author row, and nutritional facts fit within the existing brand/price panel. The image retains its full area.
 
-`npm run dev -- --open` opens a browser, `npm run build` makes a production build, and
-[db/README.md](db/README.md) has the other database commands.
+The home page filters independent posts by reviewer and sorts by their own score. Reviewer filtering is shareable through `?reviewer=<normalized-name>`. Each detail page shows one review. Optional `venueRatings` has `atmosphere`, `service`, `selection`, `cleanliness`, and `soundLevel`; these do not affect the soda score. For compatibility, `beerBrand` and `beerPriceKr` also hold soda brand and price. `location` may be empty for soda posts.
 
-## Deployment with Docker
+`favorite: true` marks an explicitly chosen **Läskfavorit**, a soda the reviewer actively prefers over others. Optional `repurchasePotential` is an integer from 0 to 5 (0 = Aldrig igen, 5 = Given i kylen), shown separately and excluded from the overall score. Missing values are unassessed, not zero. Legacy `recommended` remains accepted but does not grant favorite status; reassess it explicitly in the generator. Favorites can be filtered through `?favorite=1`.
 
-The repository includes a production app image and a MongoDB container based on `db/Dockerfile`.
+Legacy soda ratings without `mouthfeelMatch` retain their original five-score average. Existing bar reviews retain their original fields and weights; never mix formats. Legacy co-author credits do not establish independent reviews or scores.
 
-`docker-compose.yml` is for deployment only: it expects secrets in `.env`, publishes no
-ports, and attaches to an external reverse proxy network. To run the app locally, use
-`make dev` from [Setup](#setup) instead.
+To edit existing bar-format content manually:
 
-Before first start, create a `.env` file from `.env.example` and set strong credentials:
+1. Copy [the example JSON](docs/review-example.json) to `content/reviews/<slug>.json`. Replace all example text and fields; do not publish a test review.
+2. Keep the filename and `slug` identical. Published slugs must stay stable. Reserved route names such as `about`, `karta`, and `statistik` are rejected.
+3. Write `description` as a JSON string with supported Markdown. Use `\n` for line breaks. Raw HTML, links, and embedded images are disabled.
+4. Set all eight rating aspects to values from 0 to 5. The overall 0–3 rating is calculated automatically; do not add a `rating` field. Author credits are independent of Git commit authors.
+5. Use UTC ISO dates, for example `2025-01-01T12:00:00.000Z`. Preserve `createdAt`, and update `updatedAt` when editing.
+6. Prepare a JPEG, PNG, or WebP image: auto-rotate, remove EXIF/location metadata, and resize appropriately. Place it in `content/reviews/images` and enter only its filename in `image`. Prefer the generator’s compressed WebP output (at most 500 KiB). Manually prepared images must be at most 10 MiB. Image signatures are validated; this does not verify that metadata was removed. Keep names limited to letters, numbers, `_`, and `-`. Use a new filename when replacing an image to avoid stale browser caches; remove the old file if it is no longer referenced.
+7. Optionally set both `latitude` and `longitude` for the bar. Missing coordinates omit only the map marker. Coordinates are entered manually, never looked up during builds or visitor sessions.
+8. Optional `beerPriceKr` is a number between 1 and 999 with at most one decimal place. The generator accepts both comma and period decimal separators. `isHappyHourPrice: true` requires a price. Optional image focus values are percentages from 0 to 100.
+9. Run validation and checks, open a pull request, and merge when checks pass. GitHub Actions then builds and publishes the site.
 
-```bash
-cp .env.example .env
+**All committed content may be public before deployment.** Keep private drafts, backups, credentials, and database dumps outside the repository. There is no draft field. Unknown fields are rejected to prevent accidental export of private database data. Every image in `content/reviews/images` must be referenced by a review. Public history links point to the JSON file's GitHub history; legacy change logs stay in your private backup.
+
+## Migrate the existing site
+
+Back up the production database and uploads first. Migration tooling is isolated in `tools/migration` and is not installed by a normal application install.
+
+```sh
+pnpm --dir tools/migration install --ignore-workspace --frozen-lockfile
 ```
 
-Then edit `.env` and set at minimum:
+Set `MONGO_URI` and `REVIEW_IMAGE_DIR` in your shell using your existing secure credential handling. Do not put credentials in commands committed to Git or send them to Actions. With those variables set:
 
-- `MONGO_ROOT_USERNAME`
-- `MONGO_ROOT_PASSWORD`
-- `APP_MONGO_URI` (should include `authSource=admin`)
-- `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` (the production Discord channel)
-
-The development compose stack reads the same variable optionally. When it is empty, submissions
-use the local sink; when it is set, local submissions use that configured webhook. A separately
-deployed test environment should set the same variable to its test-channel URL. Automated tests
-use mocked delivery and must not use any Discord webhook.
-
-Discord webhook URLs are credentials. Keep them in untracked environment or deployment-secret
-storage, rotate them if exposed, and never place them in application code or committed config.
-
-The app build also needs `MONGO_URI` to exist at image build time, but it does not need live production credentials. The compose file uses a non-secret placeholder build arg and passes the real connection string only as runtime env.
-
-The compose file also pins stable container names for the app and MongoDB so the reverse proxy and maintenance commands do not change when the Compose project name changes.
-
-```bash
-docker compose up --build
+```sh
+node tools/migration/export.ts /tmp/enstorstark-export
 ```
 
-That brings up the app and database together. The app listens on port 3000 inside the Docker network, which makes it suitable for routing from a separate infra repo or reverse proxy stack. Uploaded images are stored in a named Docker volume so they survive container restarts.
+The output directory must not exist. The exporter reads only `published` reviews and legacy reviews with no status. It copies only referenced, validated raster images and saved resolved geocodes. It never exports users, audit logs, private drafts, or change-log contents. Images previously processed by the application already have EXIF stripped; the exporter preserves their bytes. A failed export may leave a partial directory; start a fresh export to a different path.
 
-MongoDB authentication is enabled in this compose setup. The app must connect using credentials through `APP_MONGO_URI`.
+Review `report.json`, especially rating differences and omitted invalid prices. Resolve content validation failures without widening the public-status filter. After reviewing the export, copy its review JSON to `content/reviews` and its images to `content/reviews/images`, then run `pnpm validate:content` and the full checks. Keep the report and backups outside committed content.
 
-If you are wiring this app to a separate Caddy stack, attach the app to the shared external Docker network named `caddy_net`.
+Take a final export before cutover so edits made during migration are included. Verify review counts, content, prices, authors, images, map markers, and desktop/mobile appearance against the current public site. Retain the existing deployment and backups until acceptance passes.
 
-The site also includes a minimal Google Analytics consent banner. It uses Google Consent Mode, so visits can still be measured in a limited way.
+## GitHub Pages
 
-The app image prepares the upload directory during image build and runs the SvelteKit server directly as the non-root `node` user.
+The included workflow targets `https://Flawl3ssSWE.github.io/enstorlaskreview/` and the repository's `main` branch.
 
-`TRUST_PROXY` is enabled in the compose stack so the app can respect forwarded client IP headers from your external proxy.
+1. In repository Settings → Pages, select **GitHub Actions** as the publishing source.
+2. Configure the `github-pages` environment to accept deployment only from `main`.
+3. Protect `main`: require pull requests and the build and dependency-review checks, block force pushes/deletion, and require CODEOWNER review for sensitive files when another maintainer is available to review. CODEOWNERS alone does not enforce review. Maintainers should enable 2FA/passkeys and restrict write access.
+4. Enable Dependabot alerts/security updates and secret scanning/push protection where available. Dependency review requires a public repository or the applicable private-repository security entitlement.
+5. Merge the migration only after content acceptance. GitHub Actions deploys automatically; this local implementation does not change repository settings or publish anything.
 
-If your infra repo provides a reverse proxy, point it at the `app` service on port 3000 and route whichever host or path you need there.
+For a custom domain or an account-level Pages site, change workflow `BASE_PATH` to an empty string and configure the domain in Pages settings. For a renamed repository, update the base path and `src/lib/site.ts` history destination. Local testing of the project path:
 
-### Image storage
-
-Uploaded bar images are written at runtime to `/app/uploads/images` in the production container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
-
-The `/images/<filename>` route validates the persisted filename and authorizes it through the
-review that references it before reading from the upload directory. Images belonging to published
-or legacy reviews are public and use immutable caching. Draft images require authentication and
-use private, no-store caching.
-
-Avoid `docker compose down -v` or manually deleting the `app-images` volume if you want to keep uploaded files.
-
-## Testing
-
-The project includes unit tests (Vitest) and integration tests (Playwright).
-
-### Run all tests
-
-```bash
-npm test
-# or
-yarn test
+```sh
+BASE_PATH=/enstorlaskreview pnpm test:integration
+BASE_PATH=/enstorlaskreview pnpm build
+BASE_PATH=/enstorlaskreview pnpm preview
 ```
 
-### Run unit tests only
-
-```bash
-npm run test:unit
-# or
-yarn test:unit
-```
-
-### Run integration tests only
-
-```bash
-npm run test:integration
-# or
-yarn test:integration
-```
-
-### What is covered by tests
-
-- Slug generation helpers
-- Overall rating calculation logic
-- Review form sanitization and validation helpers
-- Image MIME and file signature validation
-- Request IP extraction behavior
-- Audit logging normalization and error handling
-- Login rate-limit behavior
-- Public review statistics and its 24-hour cache
-- Public map marker serialization, price labels, geocoding fallbacks/retries/throttling, and its
-  24-hour cache
-- Automatic client-side map location, camera behavior, privacy, and cleanup
-
-## User Management
-
-All users must be created in the system before they can log in and create reviews. Users are created either via a script or direct database insertion.
-
-### Creating Users via Script
-
-Use the provided script to create new users:
-
-```bash
-npm run create-user <username> <password>
-```
-
-When running against an authenticated MongoDB, set `MONGO_URI` with credentials before running the script:
-
-```bash
-MONGO_URI='mongodb://<user>:<password>@mongo:27017/enstorstark?authSource=admin' npm run create-user <username> <password>
-```
-
-**Examples:**
-
-```bash
-npm run create-user johan_2024 lösenord123
-npm run create-user erik-review hemligt456
-npm run create-user sara_barlog password789
-```
-
-**Username Requirements:**
-
-- 3-31 characters
-- Only lowercase letters, numbers, hyphens (-), and underscores (\_)
-- Cannot include spaces or special characters
-
-**Password Requirements:**
-
-- Minimum 6 characters
-- Maximum 255 characters
-
-### Creating Users via Direct Database Insertion
-
-You can also insert users directly into MongoDB. Each user must have:
-
-- `_id`: A unique ObjectId
-- `username`: Unique lowercase username (3-31 characters, alphanumeric + - and \_)
-- `password`: Argon2-hashed password
-
-```javascript
-// Example MongoDB insertion (requires Argon2 hashing)
-db.users.insertOne({
-	_id: ObjectId(),
-	username: 'johan_2024',
-	password: '$argon2id$v=19$m=19456,t=2,p=1$...' // hashed password
-});
-```
-
-### User Roles
-
-All created users have the same permissions:
-
-- Can log in to the application
-- Can create new bar reviews as private drafts
-- Can edit any existing bar review
-- Can view and publish any draft
-- Can select the full set of credited authors when creating/editing reviews
-
-Editing is collaborative: at least one author must be selected. A selected editor becomes primary;
-if the editor opts out, a selected existing primary is retained, otherwise the first selected author
-in checklist order becomes primary. Remaining selections are stored as co-authors.
-
-Publishing is also collaborative and one-way. It preserves credited authors and records the
-publisher in the change history and audit log. There is no role system or unpublish action.
-
-## Seeding Demo Bars
-
-Fill the development database with random demo bars (default 20). The Docker development
-database creates the `dj` and `test` users when its Mongo volume is first initialized.
-
-With the Docker development stack:
-
-```bash
-make dev-seed
-make dev-seed COUNT=12
-make dev-seed COUNT=12 FRESH=1
-```
-
-On your machine with `MONGO_URI` configured:
-
-```bash
-npm run seed-bars
-npm run seed-bars -- 12
-npm run seed-bars -- 12 --fresh
-```
-
-`FRESH=1` is only for the Make command; `--fresh` is only for the npm/script command.
-Fresh mode deletes every existing bar before creating the demo bars. Seeding is disabled
-when `NODE_ENV=production` and stops without changing bars if the database contains no
-users. Seeded reviews are explicitly public.
-
-## Creating Reviews
-
-1. Log in at `/login` with your username and password
-2. Navigate to `/admin/reviews` to access the review creation form
-3. Fill in the review details:
-
-   - **Barens namn** (Bar Name)
-   - **Adress** (Address)
-   - **Författare** (Authors): Select everyone who contributed; at least one author is required, and you can deselect yourself
-   - **Bild** (Image): Upload an image of the bar
-   - **Din recension** (Description): Write your detailed review
-   - **Betygsätt din upplevelse** (Ratings): Rate aspect 0-5 scale
-
-4. Click **Spara utkast**. The fully validated review is saved as a private draft.
-5. Open the draft detail page and click **Publicera recension** when it is ready for everyone.
-
-All authenticated users can see drafts on the home page and management list. Amber **Utkast** and
-green **Publicerad** badges make their status visible. Anonymous visitors cannot find drafts in
-home/search or open their detail, history, or image URLs.
-
-Reviews created before draft support have no `publicationStatus` field. They remain public and
-editable without a migration; a missing status is interpreted as published.
-
-## Editing Reviews
-
-1. Go to a review page (drafts are visible only while logged in)
-2. Log in and click "Redigera" (Edit); any authenticated user can edit the review
-3. Modify the review details and the full author selection
-4. Click submit to save changes; the selected editor becomes primary. If you opt out, a selected existing primary
-   is retained, otherwise the first selected author in checklist order becomes primary
-
-## Statistics
-
-`/statistik` is public and always uses the same data for anonymous and logged-in visitors: published
-reviews plus legacy reviews without a `publicationStatus`. Private drafts are never included.
-
-The page shows the number of reviewed bars, the number with `Göteborg` in their address, average
-beer price, the cheapest and most expensive bar or tied bars, average overall rating, and the number
-and share of happy-hour prices. Price statistics include reported happy-hour prices; they are marked
-with an asterisk in the page.
-
-Statistics are calculated with a MongoDB aggregation and cached in each Node process for 24 hours.
-The cache is cleared immediately when a published review is edited or a draft is published, so normal
-review changes appear without waiting for the TTL.
-
-## Map
-
-`/karta` is a public, mobile-first map of published reviews and legacy reviews without a
-`publicationStatus`. Drafts are never returned to the map, including for signed-in visitors.
-
-The map is rendered with bundled MapLibre GL JS and the free, keyless OpenFreeMap Liberty style.
-MapLibre's stylesheet is bundled with the app, while the browser only fetches the map style and
-tiles from OpenFreeMap. The existing Google Maps link on each review page is separate and remains
-unchanged.
-
-Each marker has a permanently visible beer-price label when the review contains a valid price.
-Happy-hour prices use an asterisk, for example `65 kr*`, with an accessible explanation. The price
-is visual only: the marker button remains the sole click and keyboard-focus target. MapLibre moves
-an outer, fixed-size marker wrapper, while hover and selection animations are applied only to the
-button inside it. This separation keeps markers attached to their geographic positions while the
-map is panned or zoomed.
-
-### Current location and privacy
-
-Opening `/karta` asks the browser for location permission and starts `watchPosition` without a
-separate location button. The map uses balanced accuracy, permits a cached fix up to 15 seconds old,
-and gives each position attempt a 10-second timeout. These values are not a polling interval: the
-browser decides how often to provide updates and may reduce them in a background tab.
-
-The first valid position centers the map once while preserving its current zoom, bearing, and
-pitch. If the visitor moves or operates the map before that first fix, automatic centering is
-skipped. Later fixes update only the blue location dot and accuracy circle, so the visitor remains
-free to pan elsewhere. The watcher, event listeners, and location marker are removed when leaving
-the map.
-
-Current coordinates stay in browser memory only while `/karta` is open. They are never sent to the
-application server or Nominatim and are not logged, placed in analytics, cookies, or browser
-storage. Consequently, live location updates create no Nominatim traffic and need no server-side
-throttle. OpenFreeMap still receives ordinary style and tile requests and can process connection
-data, including the visitor's IP address and the requested map area. Production must use HTTPS, and
-the global `Permissions-Policy` permits geolocation only for the same origin while keeping camera
-and microphone disabled.
-
-### Address and marker caching
-
-Coordinates are stored in MongoDB's `map_geocodes` collection under a unique, normalized address
-key. Valid geocodes are retained permanently. An address that Nominatim cannot find is retried
-after 30 days; a temporary lookup failure is retried after one hour.
-
-The assembled public marker list is cached in each app process for 24 hours and shares concurrent
-reads. Expiry or invalidation only rebuilds that list from the persisted reviews and geocodes—it
-does **not** geocode every address again. The marker-list cache is invalidated after a successful
-geocode, after publishing a review, or after editing a published review. Draft creation and edits
-do not invalidate it.
-
-On first use, a map can have no markers even when reviews exist. Once the interactive map is ready,
-a signed-in editor's browser asks `/karta/next-marker` to resolve at most one uncached public
-address. Anonymous visitors can view cached markers but cannot trigger geocoding. The server uses
-Nominatim with a process-wide single in-flight lookup and a minimum one-second interval, then
-persists the result before adding its marker. This fills the cache gradually without a launch-time
-bulk import. Invalid or unknown addresses do not receive a marker, which is why the UI intentionally
-does not show a “resolved/total” counter.
-
-Every address first uses the exact saved text. If that returns no results and the first
-comma-separated segment ends in a supported standalone street-type word followed by a house
-number, a second search removes only that street-type word. For example,
-`Kullassepa tn 4, 10146 Tallinn, Estland` falls back to
-`Kullassepa 4, 10146 Tallinn, Estland`. The fallback requests at most five address-layer results
-with address details and accepts a result only when road, house number, locality, and any supplied
-postcode match. Both attempts pass through the same global one-second Nominatim throttle; transport
-or API errors stop the fallback and are stored as temporary failures.
-
-Geocode cache entries carry a strategy version. Resolved entries are never reconsidered, while an
-older negative entry without the current strategy version can bypass its previous retry time once
-so improvements to the matching strategy take effect without a migration. Current negative entries
-continue to observe the normal 30-day or one-hour retry period.
-
-## Architecture and verification
-
-[Architecture and rule ownership](docs/architecture.md) describes the request flows, module boundaries,
-and the implementation and tests for each important rule.
-
-Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint`; also run
-`npm run test:integration` for route, UI, authentication, or workflow changes. Browser tests run
-serially with shared development/test database fixtures and a local mock Discord server.
-
-## Project Structure
-
-- `/src/routes/` - Page routes including admin panels
-- `/src/lib/components/` - Reusable Svelte components
-- `/src/lib/db/` - Database collections
-- `/src/lib/types/` - TypeScript type definitions
-- `/uploads/images/` - Local development image uploads (kept outside `static` so every request is authorized)
-- `/scripts/` - Utility scripts for database management
-
-## Technology Stack
-
-- **Framework**: SvelteKit
-- **Language**: TypeScript
-- **Database**: MongoDB
-- **Authentication**: Lucia
-- **Password Hashing**: Argon2
-- **Styling**: Tailwind CSS
+The build renders every review and legacy history path, emits `404.html` and `.nojekyll`, and bundles CSS and map workers. It uses a hash-based CSP in HTML. GitHub Pages cannot reproduce the old server's custom security, cache, and permissions headers; CSP `frame-ancestors` also cannot be enforced through a meta tag. Stronger response-header control requires a hosting layer that supports it.
+
+## Supply-chain controls
+
+- Direct packages and the package manager are pinned; `pnpm-lock.yaml` contains exact transitive resolutions and integrity values. CI installs with `--frozen-lockfile`.
+- `pnpm-workspace.yaml` enforces a seven-day minimum release age, fails on missing release timestamps, verifies store integrity, and blocks exotic transitive dependency sources. The release delay reduces risk; it is not a guarantee of safety.
+- Dependency lifecycle scripts require an explicit allow/deny decision. No dependency install scripts are currently allowed; unnecessary native fallback scripts are explicitly denied. New unreviewed scripts fail installation. Review exact versions, script contents, dependency diffs, and any policy exceptions before committing updates. Never blanket-enable dependency scripts.
+- GitHub Actions are pinned to verified release commit SHAs. Dependabot proposes package and action updates weekly; updates are not automatically merged. Dependency review blocks newly introduced known high/critical vulnerabilities, and CI audits the full graph before each build; neither can identify all malicious packages.
+- Build/test jobs have read-only repository tokens and no application secrets. The privileged deployment job performs no checkout, installation, or repository script execution. Only the checked artifact from the same default-branch workflow is deployed. PR artifacts are never deployed.
+- OpenFreeMap provides external map data only after acceptance in the map overlay. The map does not request browser location, and acceptance is not persisted. Fonts are bundled locally. The site uses no analytics scripts or analytics cookies. Local bundling and CSP reduce exposure but do not make a compromised build trustworthy.
+- `source-commit.txt` records the deployed commit. To roll back, revert the problematic change through a reviewed PR and redeploy. Keep the last successful deployment and private pre-migration backups available. If a compromised dependency is suspected, isolate affected artifacts/caches, investigate, and rotate any exposed credentials before rebuilding.

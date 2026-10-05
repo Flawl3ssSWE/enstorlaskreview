@@ -1,0 +1,32 @@
+{
+	"title": "Homie Synbiotic Lime/Mint",
+	"slug": "homie-synbiotic-limemint-anton",
+	"image": "homie-synbiotic-limemint-anton.png",
+	"location": "",
+	"createdAt": "2026-10-04T14:40:15.526Z",
+	"updatedAt": "2026-10-05T22:03:53.558Z",
+	"author": "Anton",
+	"description": "Sticker inte ut i smaken, den finns mest där, luktar typ lite fläder. Är typ som en halv energidryck i koffeinmängd så passar för lite senare på dagen.",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaRatings": {
+		"taste": 3,
+		"sweetness": 2,
+		"carbonation": 4,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 5,
+		"drinkability": 3,
+		"matchesName": 3,
+		"value": 2
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"isEnergyDrink": true,
+	"caffeineMgPer100Ml": 30.3,
+	"beerBrand": "Homie",
+	"beerPriceKr": 12.5,
+	"servingMethods": ["Originalförpackning"],
+	"sugarType": "sugar-free",
+	"servingTemperature": "Kylskåpskall",
+	"sodaId": "homie-synbiotic-limemint"
+}

@@ -1,6 +1,6 @@
+import { loadReviews } from '$lib/server/content';
+import { buildReviewStatistics } from '$lib/content/derived';
 import type { PageServerLoad } from './$types';
-import { getPublicReviewStatistics } from '$lib/server/review-statistics';
-
 export const load: PageServerLoad = async () => ({
-	statistics: await getPublicReviewStatistics()
+	statistics: buildReviewStatistics(await loadReviews())
 });

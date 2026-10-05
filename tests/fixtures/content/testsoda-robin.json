@@ -1,0 +1,28 @@
+{
+	"title": "Testläsk",
+	"slug": "testsoda-robin",
+	"image": "test-bar.png",
+	"location": "",
+	"createdAt": "2025-01-01T12:00:00.000Z",
+	"updatedAt": "2025-01-02T12:00:00.000Z",
+	"isEnergyDrink": true,
+	"caffeineMgPer100Ml": 32,
+	"author": "Robin",
+	"container": "Flaska",
+	"description": "Alldeles för söt enligt Robin.",
+	"repurchasePotential": 0,
+	"favorite": false,
+	"sodaRatings": {
+		"taste": 0,
+		"sweetness": 5,
+		"carbonation": 0,
+		"mouthfeel": 0,
+		"mouthfeelMatch": 0,
+		"drinkability": 0,
+		"matchesName": 0,
+		"value": 0
+	},
+	"beerPriceKr": 30,
+	"volumeMl": 1500,
+	"sodaId": "testlask"
+}

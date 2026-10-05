@@ -1,6 +1,4 @@
+import { loadReviews } from '$lib/server/content';
+import { buildReviewMap } from '$lib/content/derived';
 import type { PageServerLoad } from './$types';
-import { getPublicReviewMapData } from '$lib/server/review-map';
-
-export const load: PageServerLoad = async () => ({
-	map: await getPublicReviewMapData()
-});
+export const load: PageServerLoad = async () => ({ map: buildReviewMap(await loadReviews()) });

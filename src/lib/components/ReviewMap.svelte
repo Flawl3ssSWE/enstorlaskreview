@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import type { PublicReviewMapMarker } from '$lib/types/review-map';
 	import { createReviewMarkers } from './review-map/markers';
-	import { startUserLocationTracking } from './review-map/location';
 
 	interface Props {
 		markers: PublicReviewMapMarker[];
@@ -14,7 +13,7 @@
 	let container = $state<HTMLDivElement>();
 	let selectedMarker = $state<PublicReviewMapMarker | null>(null);
 	let mapUnavailable = $state(false);
-	let userLocationError = $state<string | null>(null);
+	let mapAccepted = $state(false);
 	let markerController: ReturnType<typeof createReviewMarkers> | null = null;
 	let selectedElement: HTMLButtonElement | null = null;
 	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
@@ -40,10 +39,10 @@
 		const items = markers;
 		markerController?.sync(items);
 	});
-	onMount(() => {
+	$effect(() => {
+		if (!mapAccepted) return;
 		let destroyed = false;
 		let map: import('maplibre-gl').Map | null = null;
-		let stopLocation: (() => void) | null = null;
 		const initialize = async () => {
 			try {
 				const maplibre = await import('maplibre-gl');
@@ -61,9 +60,6 @@
 					'top-right'
 				);
 				markerController = createReviewMarkers(initializedMap, maplibre, showMarker);
-				stopLocation = startUserLocationTracking(initializedMap, maplibre, (message) => {
-					userLocationError = message;
-				});
 				markerController.sync(markers);
 				initializedMap.once('load', () => {
 					markerController?.sync(markers);
@@ -80,7 +76,6 @@
 		void initialize();
 		return () => {
 			destroyed = true;
-			stopLocation?.();
 			markerController?.destroy();
 			markerController = null;
 			map?.remove();
@@ -91,63 +86,79 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div
-	class="relative overflow-hidden rounded-[1.65rem] border border-white/90 bg-slate-100 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.55)]"
+	class="relative overflow-hidden rounded-[1.65rem] border border-line bg-surface-raised shadow-[0_16px_40px_-30px_rgba(15,23,42,0.55)]"
 >
 	<div
 		bind:this={container}
 		class="h-[min(66svh,38rem)] min-h-[24rem] w-full"
-		aria-label="Karta över recenserade barer"
+		aria-label="Karta över platser där vi har provat läsk"
 	></div>
 
-	{#if mapUnavailable || userLocationError}
+	{#if !mapAccepted}
+		<section
+			class="absolute inset-0 flex items-center justify-center bg-surface-raised p-6 text-center"
+			aria-labelledby="map-acceptance-title"
+		>
+			<div class="max-w-md">
+				<h2 id="map-acceptance-title" class="text-2xl font-semibold text-ink">Visa kartan?</h2>
+				<p class="mt-3 text-sm leading-relaxed text-secondary">
+					När du laddar kartan hämtar din webbläsare kartdata från OpenFreeMap. Då får leverantören
+					din IP-adress och information om vilket kartområde du visar. Vi ber inte om din position.
+				</p>
+				<a
+					href={resolve('/about') + '/'}
+					class="mt-3 inline-block text-sm text-secondary underline underline-offset-4"
+				>
+					Läs mer om kartan och integriteten
+				</a>
+				<button
+					type="button"
+					onclick={() => (mapAccepted = true)}
+					class="mx-auto mt-6 block min-h-11 rounded-full bg-ember px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+				>
+					Jag godkänner – ladda kartan
+				</button>
+			</div>
+		</section>
+	{/if}
+
+	{#if mapUnavailable}
 		<div class="pointer-events-none absolute inset-x-4 top-4 space-y-2">
-			{#if mapUnavailable}
-				<div
-					class="rounded-2xl border border-amber-300/80 bg-amber-50/95 p-4 text-sm text-amber-950 shadow-sm"
-					role="status"
-				>
-					Kartan kunde inte laddas just nu. Försök igen om en liten stund.
-				</div>
-			{/if}
-			{#if userLocationError}
-				<div
-					class="bar-map-user-location-error rounded-2xl border border-white/90 bg-white/95 p-3 text-sm text-slate-700 shadow-sm"
-					role="status"
-				>
-					{userLocationError}
-				</div>
-			{/if}
+			<div
+				class="rounded-2xl border border-amber-300/80 bg-amber-950/95 p-4 text-sm text-amber-100 shadow-sm"
+				role="status"
+			>
+				Kartan kunde inte laddas just nu. Försök igen om en liten stund.
+			</div>
 		</div>
 	{/if}
 
 	{#if selectedMarker}
 		<section
-			class="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/90 bg-white/94 p-4 shadow-[0_18px_42px_-22px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
+			class="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-line bg-surface-raised p-4 shadow-[0_18px_42px_-22px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
 			aria-label={`Information om ${selectedMarker.title}`}
 		>
 			<div class="flex items-start justify-between gap-3">
 				<div>
-					<p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-						Recension
-					</p>
-					<h2 class="mt-1 text-xl font-semibold text-slate-900">{selectedMarker.title}</h2>
+					<p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recension</p>
+					<h2 class="mt-1 text-xl font-semibold text-ink">{selectedMarker.title}</h2>
 				</div>
 				<button
 					type="button"
-					class="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-white bg-slate-100 text-lg text-slate-600 transition hover:bg-white hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+					class="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface-raised text-lg text-secondary transition hover:bg-surface-raised hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
 					onclick={closePreview}
 					aria-label="Stäng förhandsvisning"
 				>
 					×
 				</button>
 			</div>
-			<p class="mt-2 text-sm text-slate-600">{selectedMarker.location}</p>
-			<p class="mt-3 text-sm font-semibold text-slate-800">
+			<p class="mt-2 text-sm text-secondary">{selectedMarker.location}</p>
+			<p class="mt-3 text-sm font-semibold text-ink">
 				Helhetsbetyg: {selectedMarker.rating}/3
 			</p>
 			<a
-				href={`/${encodeURIComponent(selectedMarker.slug)}`}
-				class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-slate-900 px-4 text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+				href={resolve('/[slug]', { slug: selectedMarker.slug }) + '/'}
+				class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-ember px-4 text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
 			>
 				Läs recension
 			</a>
@@ -219,11 +230,11 @@
 		padding: 0.38rem 0.55rem;
 		pointer-events: none;
 		transform: translateY(-50%);
-		border: 1px solid rgb(255 255 255 / 0.92);
+		border: 1px solid var(--color-line);
 		border-radius: 9999px;
-		background: rgb(255 255 255 / 0.9);
+		background: var(--color-surface-raised);
 		box-shadow: 0 5px 14px rgb(15 23 42 / 0.2);
-		color: rgb(15 23 42);
+		color: var(--color-ink);
 		font-size: 0.75rem;
 		font-weight: 700;
 		line-height: 1;
@@ -249,39 +260,10 @@
 		border: 0;
 	}
 
-	:global(.bar-map-user-location-positioner) {
-		z-index: 1;
-		width: 0;
-		height: 0;
-		pointer-events: none;
-	}
-
-	:global(.bar-map-user-location-accuracy),
-	:global(.bar-map-user-location-dot) {
-		position: absolute;
-		top: 0;
-		left: 0;
-		pointer-events: none;
-		transform: translate(-50%, -50%);
-		border-radius: 9999px;
-	}
-
-	:global(.bar-map-user-location-accuracy) {
-		border: 1px solid rgb(14 165 233 / 0.36);
-		background: rgb(56 189 248 / 0.16);
-	}
-
-	:global(.bar-map-user-location-dot) {
-		width: 1rem;
-		height: 1rem;
-		border: 3px solid white;
-		background: rgb(14 165 233);
-		box-shadow: 0 2px 10px rgb(15 23 42 / 0.32);
-	}
-
 	:global(.maplibregl-ctrl-group) {
+		background: var(--color-surface-raised);
 		overflow: hidden;
-		border: 1px solid rgb(255 255 255 / 0.9);
+		border: 1px solid var(--color-line);
 		border-radius: 1rem;
 		box-shadow: 0 8px 22px rgb(15 23 42 / 0.18);
 	}
@@ -291,8 +273,18 @@
 		height: 2.4rem;
 	}
 
+	:global(.maplibregl-ctrl-group button + button) {
+		border-top-color: var(--color-line);
+	}
+
+	:global(.maplibregl-ctrl-group button .maplibregl-ctrl-icon),
+	:global(.maplibregl-ctrl-attrib-button) {
+		filter: invert(1);
+	}
+
 	:global(.maplibregl-ctrl-attrib) {
+		color: var(--color-ink);
 		border-radius: 0.5rem 0 0 0;
-		background: rgb(255 255 255 / 0.83);
+		background: var(--color-surface);
 	}
 </style>

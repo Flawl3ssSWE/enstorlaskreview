@@ -1,0 +1,30 @@
+{
+	"title": "Pepsi Max Tropical",
+	"slug": "pepsi-max-tropical",
+	"image": "pepsi-max-tropical.png",
+	"location": "",
+	"createdAt": "2026-10-02T13:04:05.409Z",
+	"updatedAt": "2026-10-05T22:01:14.613Z",
+	"beerBrand": "Pepsi",
+	"beerPriceKr": 8,
+	"author": "Anton",
+	"container": "Burk",
+	"volumeMl": 330,
+	"description": "Smakar lite tuttifruktigaktigt, lite väl söt.",
+	"favorite": false,
+	"repurchasePotential": 1,
+	"sodaRatings": {
+		"taste": 2,
+		"sweetness": 5,
+		"carbonation": 4,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 5,
+		"drinkability": 1,
+		"matchesName": 4,
+		"value": 2
+	},
+	"sodaId": "pepsi-max-tropical",
+	"servingMethods": ["Originalförpackning"],
+	"sugarType": "sugar-free",
+	"servingTemperature": "Kylskåpskall"
+}

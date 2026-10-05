@@ -1,0 +1,14 @@
+# Enable required CODEOWNER review in the repository ruleset.
+/.github/ @Flawl3ssSWE
+/package.json @Flawl3ssSWE
+/pnpm-lock.yaml @Flawl3ssSWE
+/pnpm-workspace.yaml @Flawl3ssSWE
+/.npmrc @Flawl3ssSWE
+/.node-version @Flawl3ssSWE
+/svelte.config.js @Flawl3ssSWE
+/vite.config.ts @Flawl3ssSWE
+/scripts/ @Flawl3ssSWE
+/tools/ @Flawl3ssSWE
+/src/lib/content/ @Flawl3ssSWE
+/src/lib/server/ @Flawl3ssSWE
+/src/app.html @Flawl3ssSWE

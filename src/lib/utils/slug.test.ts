@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateSlug, sanitizeSlug } from './slug';
+import { generateSlug, sanitizeSlug, generateSodaId } from './slug';
 
 describe('generateSlug', () => {
 	it('converts Swedish characters to ascii', () => {
@@ -18,5 +18,18 @@ describe('generateSlug', () => {
 describe('slug sanitization', () => {
 	it('sanitizeSlug keeps letters, digits, accents, and hyphens', () => {
 		expect(sanitizeSlug('  Café åäö ! test---slug  ')).toBe('Café-åäö-test-slug');
+	});
+});
+
+describe('soda IDs entered in the generator', () => {
+	it.each([
+		['rockstar-guava-zero', 'rockstar-guava-zero'],
+		[' Rockstar Guava Zero ', 'rockstar-guava-zero'],
+		['Rockstar__Guava--Zero', 'rockstar-guava-zero'],
+		['ÅÄÖ Café Zero', 'aao-cafe-zero'],
+		['zero-2', 'zero-2'],
+		['-- !! __ ', '']
+	])('formats %s as %s', (input, expected) => {
+		expect(generateSodaId(input)).toBe(expected);
 	});
 });

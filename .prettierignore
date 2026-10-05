@@ -1,4 +1,7 @@
-# Package Managers
-package-lock.json
+# Package manager lockfiles
 pnpm-lock.yaml
-yarn.lock
+
+.test-site/
+tools/migration/pnpm-lock.yaml
+playwright-report/
+test-results/

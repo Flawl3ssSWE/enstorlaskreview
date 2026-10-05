@@ -1,14 +1,14 @@
-node_modules
-.yarn
-.tool-versions
+node_modules/
 
 # Output
-.output
-.vercel
 /.svelte-kit
 /build
 /playwright-report
 /test-results
+/coverage/
+
+# Package manager logs
+pnpm-debug.log*
 
 # OS
 .DS_Store
@@ -18,12 +18,11 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-!.env.test
 
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Custom
-static/images
-uploads/images
+# Temporary test builds and migration exports
+.test-site/
+.migration-export/
