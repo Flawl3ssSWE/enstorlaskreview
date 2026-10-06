@@ -1,0 +1,35 @@
+{
+	"title": "Fanta Forest Berries",
+	"sodaId": "fanta-forest-berries",
+	"slug": "fanta-forest-berries-anton",
+	"image": "fanta-forest-berries-anton.webp",
+	"location": "",
+	"createdAt": "2026-10-06T11:33:05.387Z",
+	"updatedAt": "2026-10-06T11:33:05.387Z",
+	"author": "Anton",
+	"description": "En riktig god läsk, med smak av skogen. Hade kunnat vara lite mer kolsyra men inget som tar ifrån upplevelsen.",
+	"favorite": true,
+	"repurchasePotential": 4,
+	"sodaRatings": {
+		"taste": 5,
+		"sweetness": 3,
+		"carbonation": 4,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 3,
+		"drinkability": 5,
+		"matchesName": 4,
+		"value": 4
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"servingMethods": [
+		"Originalförpackning"
+	],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"beerBrand": "Fanta",
+	"beerPriceKr": 8,
+	"imageFocusX": 50,
+	"imageFocusY": 41,
+	"imageZoom": 1
+}
