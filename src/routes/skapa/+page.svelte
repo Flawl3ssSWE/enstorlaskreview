@@ -14,6 +14,7 @@
 		REPURCHASE_POTENTIAL_LABELS
 	} from '$lib/review-metadata';
 	import { validateReview } from '$lib/content/validation';
+	import { formatReviewJson } from '$lib/content/export';
 	import { suggestDrinkTypes } from '$lib/utils/drink-facts';
 	import { sodaScore } from '$lib/content/soda';
 	import { ratingFromAverage } from '$lib/utils/ratings';
@@ -359,7 +360,7 @@
 		notice = '';
 	}
 
-	function exportReview(event: SubmitEvent) {
+	async function exportReview(event: SubmitEvent) {
 		event.preventDefault();
 		error = '';
 		notice = '';
@@ -417,10 +418,8 @@
 					: {})
 			};
 			validateReview(review, `${slug}.json`);
-			download(
-				new Blob([JSON.stringify(review, null, '\t') + '\n'], { type: 'application/json' }),
-				`${slug}.json`
-			);
+			const json = await formatReviewJson(review);
+			download(new Blob([json], { type: 'application/json' }), `${review.slug}.json`);
 			notice = image
 				? `JSON-filen är klar. Ladda också ner bilden ${imageName}.`
 				: 'JSON-filen är klar. Den befintliga bilden används.';

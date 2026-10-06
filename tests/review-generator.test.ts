@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { format, resolveConfig } from 'prettier';
 import { validateReview } from '../src/lib/content/validation';
 import {
 	DRINK_CONTAINERS,
@@ -25,7 +26,14 @@ async function exportJson(page: import('@playwright/test').Page) {
 	const downloadPromise = page.waitForEvent('download');
 	await page.getByRole('button', { name: 'Ladda ner JSON' }).click();
 	const download = await downloadPromise;
-	const json = JSON.parse(await readFile((await download.path())!, 'utf8'));
+	const text = await readFile((await download.path())!, 'utf8');
+	expect(text).toBe(
+		await format(text, {
+			...(await resolveConfig('content/reviews/example.json')),
+			parser: 'json'
+		})
+	);
+	const json = JSON.parse(text);
 	validateReview(json, download.suggestedFilename());
 	return { json, filename: download.suggestedFilename() };
 }
@@ -43,6 +51,7 @@ test('generator downloads one flat review with one price and a separate compress
 	expect(await page.locator('#review-1-volume option').count()).toBe(DRINK_VOLUMES_ML.length + 2);
 	await page.locator('#container').selectOption('Burk');
 	await page.locator('#review-1-volume').selectOption('330');
+	await page.getByRole('checkbox', { name: 'Originalförpackning', exact: true }).check();
 	await page.getByLabel('Pris i kronor (valfritt)', { exact: true }).fill('25');
 	await page.getByRole('checkbox', { name: /läskfavorit/ }).check();
 	await page.getByLabel('Återköpspotential (valfritt)').selectOption('0');
@@ -62,7 +71,8 @@ test('generator downloads one flat review with one price and a separate compress
 		beerPriceKr: 25,
 		image: 'ny-hallonsoda-test.webp',
 		container: 'Burk',
-		volumeMl: 330
+		volumeMl: 330,
+		servingMethods: ['Originalförpackning']
 	});
 	expect(json).not.toHaveProperty('reviews');
 	expect(json).not.toHaveProperty('rating');

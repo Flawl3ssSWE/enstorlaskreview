@@ -22,9 +22,7 @@
 	},
 	"container": "Burk",
 	"volumeMl": 330,
-	"servingMethods": [
-		"Originalförpackning"
-	],
+	"servingMethods": ["Originalförpackning"],
 	"servingTemperature": "Kylskåpskall",
 	"servedWithIce": false,
 	"beerBrand": "Fanta",
