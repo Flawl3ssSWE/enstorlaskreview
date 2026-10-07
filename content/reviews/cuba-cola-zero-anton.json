@@ -1,0 +1,32 @@
+{
+	"title": "Cuba Cola Zero",
+	"sodaId": "cuba-cola-zero",
+	"slug": "cuba-cola-zero-anton",
+	"image": "cuba-cola-zero-anton.webp",
+	"location": "",
+	"createdAt": "2026-10-07T10:32:57.832Z",
+	"updatedAt": "2026-10-07T10:32:57.832Z",
+	"author": "Anton",
+	"description": "Den må vara en klassiker, men smaken är lite för svag i förhållande till kolsyran.",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaRatings": {
+		"taste": 3,
+		"sweetness": 2,
+		"carbonation": 2,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 5,
+		"drinkability": 3,
+		"matchesName": 3,
+		"value": 3
+	},
+	"sugarType": "sugar-free",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"beerBrand": "Cuba Cola",
+	"beerPriceKr": 6.9,
+	"imageFocusX": 50,
+	"imageFocusY": 59,
+	"imageZoom": 1.15
+}
