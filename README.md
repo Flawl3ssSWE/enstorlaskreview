@@ -21,6 +21,10 @@ pnpm preview
 
 Playwright builds only clearly labelled test reviews in a temporary asset directory. Run `pnpm build` afterward to restore the production build from `content/reviews` and `content/reviews/images`. No `.env` or MongoDB is required.
 
+## Appearance
+
+The design follows the photo-led cards and simpler navigation of En Stor Stark Review, adapted for soda reviews. Both themes retain the warm red palette: charcoal in dark mode, cream and blush in light mode. Dark is the default. The navbar toggle saves only `soda-theme` in local storage; `static/theme.js` applies that preference before first paint without cookies or inline scripts. If storage is unavailable, switching still works for the current visit. Detail pages pair a square photo with the title, overall rating, price, and reviewer on desktop, then stack them on mobile. Review text, drink facts, rating breakdowns, optional venue scores, and other reviewers remain separate sections. Shared palette values and page/card utilities live in `src/app.css`.
+
 ## Add or edit a review
 
 The RSS 2.0 feed is available at **https://enstorlaskreview.se/rss.xml**, with autodiscovery and an **RSS-flöde** footer link. Every build automatically updates the static feed from all validated reviews, including legacy reviews, with full formatted review text and author credits. Entries are ordered by creation date (newest first, then slug); editing a review keeps its URL-based GUID and publication date. The feed's build date follows the latest review update. Repository-path builds retain their configured `BASE_PATH` in feed and review URLs.

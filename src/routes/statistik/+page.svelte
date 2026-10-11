@@ -91,16 +91,8 @@
 	/>
 </svelte:head>
 
-<section class="relative overflow-hidden px-4 pb-14 pt-8 sm:px-8 sm:pt-10">
-	<div class="pointer-events-none absolute inset-0 -z-10">
-		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-surface-raised blur-3xl"></div>
-		<div class="absolute right-0 top-20 h-80 w-80 rounded-full bg-red-950/25 blur-3xl"></div>
-		<div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-rose-950/20 blur-3xl"></div>
-	</div>
-
-	<div
-		class="mx-auto w-full max-w-6xl rounded-[2rem] border border-line bg-surface p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_16px_40px_-34px_rgba(0,0,0,0.65)] backdrop-blur-2xl sm:p-8"
-	>
+<section class="page-shell">
+	<div class="mx-auto w-full max-w-6xl">
 		<p class="text-xs font-semibold uppercase tracking-[0.34em] text-muted">En stor läsk review</p>
 		<h1 class="mt-4 text-3xl font-semibold leading-tight text-ink sm:text-5xl">Läsk i siffror.</h1>
 		<p class="mt-4 max-w-2xl text-sm leading-relaxed text-secondary sm:text-base">

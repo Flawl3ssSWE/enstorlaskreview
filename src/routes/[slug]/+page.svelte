@@ -6,11 +6,17 @@
 	import type { PageProps } from './$types';
 	import { UNKNOWN_BRAND_LABEL } from '$lib/brand';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
-	import { formatDrinkContainer } from '$lib/utils/drink-facts';
+	import {
+		formatDrinkContainer,
+		drinkVolumeMl,
+		drinkTypeLabels,
+		nutritionFacts
+	} from '$lib/utils/drink-facts';
 	import DrinkFacts from '$lib/components/DrinkFacts.svelte';
 	import HelpTip from '$lib/components/HelpTip.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import MapPin from '@lucide/svelte/icons/map-pin';
+	import CupSoda from '@lucide/svelte/icons/cup-soda';
 	import {
 		REVIEW_RATING_METRICS,
 		SODA_RATING_METRICS,
@@ -22,6 +28,15 @@
 	let { data }: PageProps = $props();
 	const bar = $derived(data.bar);
 	const favorite = $derived(favoriteLabel(bar));
+	const hasDrinkFacts = $derived(
+		!!bar.container ||
+			drinkVolumeMl(bar) !== undefined ||
+			drinkTypeLabels(bar).length > 0 ||
+			nutritionFacts(bar).length > 0 ||
+			!!bar.servingMethods?.length ||
+			!!bar.servingTemperature ||
+			bar.servedWithIce !== undefined
+	);
 	const balance = $derived(
 		bar.sodaRatings?.mouthfeelMatch !== undefined
 			? sweetnessBalance(bar.sodaRatings.sweetness)
@@ -64,152 +79,129 @@
 	}
 </script>
 
-<section class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6 sm:px-6">
+<svelte:head>
+	<title>{bar.title} – En Stor Läsk Review</title>
+</svelte:head>
+
+<section class="page-shell">
 	<a
 		href={resolve('/')}
-		class="inline-flex items-center gap-2 text-sm font-semibold text-secondary transition-colors hover:text-ink"
+		class="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-secondary transition-colors hover:text-ink"
 	>
 		<ArrowLongLeft className="size-5" />
 		<span>Tillbaka till recensioner</span>
 	</a>
 
-	<article
-		class="mt-4 overflow-hidden rounded-3xl border border-line bg-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_30px_-26px_rgba(0,0,0,0.65)] backdrop-blur-xl"
-	>
-		<ReviewImage
-			src={`${base}/images/${bar.image}`}
-			alt={bar.title}
-			focusX={bar.imageFocusX}
-			focusY={bar.imageFocusY}
-			zoom={bar.imageZoom}
-		/>
-
-		<div class="space-y-6 p-5 sm:p-8">
-			{#if favorite}<p
-					class="inline-block rounded-full border border-accent/30 bg-surface-raised px-3 py-1 text-sm font-semibold text-accent"
-				>
-					{favorite}
-				</p>{/if}
-			<RepurchasePotential score={bar.repurchasePotential} />
-			<header class="space-y-3">
-				<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-					<div>
-						<div class="flex flex-wrap items-center gap-3">
-							<p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Recension</p>
-						</div>
-						<h1 class="mt-2 text-3xl font-semibold text-ink sm:text-4xl">
-							{bar.title}
-						</h1>
-						{#if bar.location}
-							<a
-								href={googleMapsUrl}
-								target="_blank"
-								rel="noopener noreferrer"
-								class="mt-1 inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.2em] text-muted transition-colors hover:text-secondary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-							>
-								<MapPin size={16} strokeWidth={1.75} class="shrink-0" aria-hidden="true" />
-								<span>{bar.location}</span>
-							</a>
-						{/if}
-					</div>
-					<div class="grid w-full gap-3 sm:w-auto sm:min-w-44">
-						<div
-							class="rounded-2xl border border-line bg-surface-raised px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-						>
-							<p class="text-xs uppercase tracking-[0.2em] text-muted">
-								{bar.sodaRatings ? 'Läskens helhetsbetyg' : 'Helhetsbetyg'}
-							</p>
-							<p class="text-4xl font-bold text-ink sm:text-5xl">
-								{`${bar.rating}/3`}
-							</p>
-						</div>
-						<div
-							class="rounded-2xl border border-line bg-surface-raised px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-						>
-							<div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
-								<div class="min-w-0">
-									<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-										Märke
-									</p>
-									<p class="text-xl font-bold leading-tight text-ink">
-										{beerBrandDisplay}
-									</p>
-								</div>
-								{#if beerPriceDisplay}
-									<div class="text-right">
-										<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-											Pris
-										</p>
-										<p class="whitespace-nowrap text-3xl font-bold leading-none text-ink">
-											{beerPriceDisplay.text}
-										</p>
-									</div>
-								{/if}
-							</div>
-							{#if beerPriceDisplay?.note}
-								<p class="mt-2 text-right text-xs text-muted">{beerPriceDisplay.note}</p>
-							{/if}
-						</div>
-					</div>
+	<article class="glass-panel mt-4 overflow-hidden">
+		<div class="md:grid md:grid-cols-2">
+			<div class="p-3">
+				<div class="overflow-hidden rounded-2xl">
+					<ReviewImage
+						src={`${base}/images/${bar.image}`}
+						alt={bar.title}
+						focusX={bar.imageFocusX}
+						focusY={bar.imageFocusY}
+						zoom={bar.imageZoom}
+						square
+					/>
 				</div>
-
-				<div class="space-y-1 text-sm text-secondary">
-					<div>
-						<span class="text-muted">Författare:</span>
-						<span class="ml-2 text-ink">{formatAuthors(bar.author, bar.coAuthors)}</span>
-					</div>
-					<div class="text-xs text-muted">
-						<span>Skapad {formatDate(bar.createdAt)}</span>
-						<span class="mx-2">•</span>
-						<span>Uppdaterad {formatDate(bar.updatedAt)}</span>
-					</div>
-				</div>
-			</header>
-
-			<section class="space-y-2">
-				<h2 class="text-base font-semibold text-ink">Recension</h2>
-				{#if bar.container}<p class="text-sm text-secondary">
-						Förpackning: {formatDrinkContainer(bar)}
+			</div>
+			<header
+				class="flex min-w-0 flex-col p-5 pb-0 sm:p-8 sm:pb-0 md:justify-center md:p-8 lg:p-10"
+			>
+				{#if favorite}<p
+						class="mb-4 self-start rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-sm font-semibold text-accent"
+					>
+						{favorite}
 					</p>{/if}
-				<DrinkFacts drink={bar} />
-				<ReviewDescription description={bar.description} />
-			</section>
-
-			{#if data.relatedReviews.length}
-				<section class="space-y-3" aria-labelledby="related-reviews-heading">
-					<h2 id="related-reviews-heading" class="text-base font-semibold text-ink">
-						Fler recensioner av samma läsk
-					</h2>
-					<ul class="space-y-2">
-						{#each data.relatedReviews as review (review.slug)}
-							<li>
-								<a
-									href={resolve('/[slug]', { slug: review.slug }) + '/'}
-									class="flex items-start justify-between gap-4 rounded-xl border border-line bg-surface-raised p-4 transition hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-								>
-									<div class="min-w-0">
-										<p class="font-semibold text-ink">{formatAuthors(review.author)}</p>
-										<p class="text-sm text-secondary">{review.title}</p>
-										<p class="mt-1 text-xs text-muted">{formatDate(review.createdAt)}</p>
-									</div>
-									<span class="shrink-0 font-semibold text-accent">{review.rating}/3</span>
-								</a>
-							</li>
+				<h1 class="text-balance text-3xl font-semibold text-ink sm:text-4xl lg:text-5xl">
+					{bar.title}
+				</h1>
+				{#if bar.location}
+					<a
+						href={googleMapsUrl}
+						target="_blank"
+						rel="external noopener noreferrer"
+						class="mt-3 inline-flex items-start gap-1.5 self-start rounded-sm text-secondary underline-offset-4 transition-colors hover:text-ink hover:underline"
+					>
+						<MapPin size={18} strokeWidth={1.75} class="mt-0.5 shrink-0" aria-hidden="true" />
+						<span>{bar.location}</span>
+					</a>
+				{/if}
+				<div class="mt-6 flex flex-wrap items-center gap-4">
+					<p
+						class="flex gap-1"
+						role="img"
+						aria-label={`${bar.sodaRatings ? 'Läskens helhetsbetyg' : 'Helhetsbetyg'} ${bar.rating} av 3`}
+					>
+						{#each { length: 3 } as _, index (index)}
+							<CupSoda
+								size={32}
+								strokeWidth={1.75}
+								class={index < bar.rating ? 'text-accent' : 'text-muted/40'}
+								aria-hidden="true"
+							/>
 						{/each}
-					</ul>
-				</section>
-			{/if}
+					</p>
+					<p class="text-sm text-secondary" aria-hidden="true">
+						<span class="font-semibold tabular-nums text-ink">{bar.rating} av 3</span>
+					</p>
+				</div>
+				<p class="mt-4 text-lg text-secondary">
+					<span class="font-semibold text-ink">{beerBrandDisplay}</span>
+					{#if beerPriceDisplay}<span class="mx-1.5 text-muted" aria-hidden="true">·</span><span
+							class="whitespace-nowrap font-semibold tabular-nums text-ink"
+							>{beerPriceDisplay.text}</span
+						>{/if}
+				</p>
+				{#if beerPriceDisplay?.note}<p class="mt-1 text-sm text-muted">
+						{beerPriceDisplay.note}
+					</p>{/if}
+				<div class="mt-3"><RepurchasePotential score={bar.repurchasePotential} /></div>
+				<div
+					class="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-line pt-5 text-sm text-secondary"
+				>
+					<p>Av <span class="text-ink">{formatAuthors(bar.author, bar.coAuthors)}</span></p>
+					<p>Skapad {formatDate(bar.createdAt)}</p>
+				</div>
+				<p class="mt-1 text-xs text-muted">Uppdaterad {formatDate(bar.updatedAt)}</p>
+			</header>
+		</div>
 
-			<section class="space-y-3">
-				<h2 class="text-base font-semibold text-ink">
+		<div class="space-y-8 p-5 sm:p-8">
+			<div
+				class="grid gap-8 {hasDrinkFacts
+					? 'lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-12'
+					: ''}"
+			>
+				<section class="min-w-0 max-w-prose space-y-3" aria-labelledby="review-heading">
+					<h2 id="review-heading" class="text-xl font-semibold text-ink">Recension</h2>
+					<ReviewDescription description={bar.description} />
+				</section>
+				{#if hasDrinkFacts}
+					<section
+						class="min-w-0 space-y-2 border-t border-line pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"
+						aria-labelledby="drink-facts-heading"
+					>
+						<h2 id="drink-facts-heading" class="mb-3 text-xl font-semibold text-ink">
+							Drycksfakta
+						</h2>
+						{#if bar.container}<p class="text-sm text-secondary">
+								Förpackning: {formatDrinkContainer(bar)}
+							</p>{/if}
+						<DrinkFacts drink={bar} />
+					</section>
+				{/if}
+			</div>
+
+			<section class="space-y-4 border-t border-line pt-6" aria-labelledby="ratings-heading">
+				<h2 id="ratings-heading" class="text-xl font-semibold text-ink">
 					{bar.sodaRatings ? 'Läskbetyg' : 'Betygsfördelning'}
 				</h2>
-				<ul class="space-y-3">
+				<ul class="grid gap-x-10 gap-y-4 sm:grid-cols-2">
 					{#each ratingFields as field (field.key)}
-						<li
-							class="rounded-xl border border-line bg-surface p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-						>
-							<div class="mb-2 flex items-center justify-between text-sm">
+						<li class="min-w-0">
+							<div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
 								<span class="flex items-center gap-1 text-secondary">
 									<span>{field.label}</span>
 									<HelpTip
@@ -217,11 +209,13 @@
 										text={`${field.description}${field.key === 'sweetness' && balance !== undefined ? ` Sötmabalans: ${formatRating(balance)}. Perfekt sötma (3) ger högst poäng.` : ''}`}
 									/>
 								</span>
-								<span class="font-semibold text-ink">{formatRating(field.value)}</span>
+								<span class="shrink-0 font-semibold tabular-nums text-ink"
+									>{formatRating(field.value)}</span
+								>
 							</div>
-							<div class="h-2 w-full rounded-full bg-line">
+							<div class="h-1.5 w-full rounded-full bg-line" aria-hidden="true">
 								<div
-									class="h-2 rounded-full bg-accent"
+									class="h-1.5 rounded-full bg-accent"
 									style={`width: ${getBarWidth(field.value)}`}
 								></div>
 							</div>
@@ -231,27 +225,64 @@
 			</section>
 
 			{#if bar.venueRatings}
-				<section class="space-y-3">
+				<section
+					class="space-y-4 border-t border-line pt-6"
+					aria-labelledby="venue-ratings-heading"
+				>
 					<div class="flex items-center gap-1">
-						<h2 class="text-base font-semibold text-ink">Betyg på stället</h2>
+						<h2 id="venue-ratings-heading" class="text-xl font-semibold text-ink">
+							Betyg på stället
+						</h2>
 						<HelpTip label="Betyg på stället" text="Påverkar inte läskens helhetsbetyg." />
 					</div>
-					<ul class="space-y-2">
+					<ul class="grid gap-x-10 gap-y-3 sm:grid-cols-2">
 						{#each VENUE_RATING_METRICS as field (field.key)}
-							<li class="flex justify-between rounded-xl border border-line p-3">
-								<span>{field.label}</span><span>{bar.venueRatings[field.key]}/5</span>
+							<li class="flex items-baseline justify-between gap-3 text-sm text-secondary">
+								<span>{field.label}</span><span class="shrink-0 font-semibold tabular-nums text-ink"
+									>{formatRating(bar.venueRatings[field.key])}</span
+								>
 							</li>
 						{/each}
 					</ul>
 				</section>
 			{/if}
-			<div class="border-t border-line pt-4">
+
+			{#if data.relatedReviews.length}
+				<section
+					class="space-y-4 border-t border-line pt-6"
+					aria-labelledby="related-reviews-heading"
+				>
+					<h2 id="related-reviews-heading" class="text-xl font-semibold text-ink">
+						Fler recensioner av samma läsk
+					</h2>
+					<ul class="grid gap-3 sm:grid-cols-2">
+						{#each data.relatedReviews as review (review.slug)}
+							<li>
+								<a
+									href={resolve('/[slug]', { slug: review.slug }) + '/'}
+									class="flex h-full items-start justify-between gap-4 rounded-2xl border border-line p-4 transition-colors hover:border-accent hover:bg-surface-raised"
+								>
+									<div class="min-w-0">
+										<p class="font-semibold text-ink">{formatAuthors(review.author)}</p>
+										<p class="mt-1 text-sm text-secondary">{review.title}</p>
+										<p class="mt-1 text-xs text-muted">{formatDate(review.createdAt)}</p>
+									</div>
+									<span class="shrink-0 font-semibold tabular-nums text-accent"
+										>{review.rating}/3</span
+									>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+
+			<div class="border-t border-line pt-5">
 				<a
 					href={data.historyUrl}
-					class="mr-2 inline-flex items-center justify-center rounded-full border border-line bg-surface-raised px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-secondary transition hover:bg-surface-raised hover:text-ink"
+					class="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface-raised px-5 py-2 text-sm font-semibold text-secondary transition-colors hover:text-ink"
+					>Visa historik på GitHub</a
 				>
-					Visa historik på GitHub
-				</a>
 			</div>
 		</div>
 	</article>

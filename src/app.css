@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@theme {
+@theme static {
 	--color-primary-gray: oklch(0.19 0.0026 247.96);
 	--color-nav-gray: oklch(0.26 0.0119 248.29);
 	--color-cream: oklch(0.98 0.012 85);
@@ -15,8 +15,54 @@
 	--color-clay: oklch(0.9 0.045 20);
 	--color-moss: oklch(0.5 0.09 165);
 	--color-char: oklch(0.32 0.015 25);
+	--color-on-photo: #fff8f5;
+	--color-accent-soft: #3c2025;
+	--color-energy: #fcd34d;
+	--color-electrolyte: #c4b5fd;
+	--color-protein: #7dd3fc;
+	--color-sugarfree: #6ee7b7;
+	--color-sugared: #f0abfc;
 	--font-sans: 'IBM Plex Sans', sans-serif;
 	--font-serif: 'Archivo', sans-serif;
+}
+
+/* Both themes share the warm red palette; only surface and text values change. */
+:root {
+	color-scheme: dark;
+	--page-top: #171415;
+	--page-bottom: #121112;
+	--glow-red: #452023;
+	--glow-rose: #301d24;
+}
+
+:root[data-theme='light'] {
+	color-scheme: light;
+	--color-ink: #2b2023;
+	--color-secondary: #59454b;
+	--color-muted: #755e65;
+	--color-surface: #fffaf6;
+	--color-surface-raised: #f6eae5;
+	--color-line: #dec8c6;
+	--color-accent: #a32637;
+	--color-accent-soft: #f8dede;
+	--color-energy: #805300;
+	--color-electrolyte: #6d3bbb;
+	--color-protein: #07658a;
+	--color-sugarfree: #096b4c;
+	--color-sugared: #a1268b;
+	--page-top: #fff7ef;
+	--page-bottom: #f4e6e1;
+	--glow-red: #f6c9c4;
+	--glow-rose: #ecd1d7;
+}
+
+@utility page-shell {
+	@apply mx-auto w-full max-w-6xl px-4 pb-14 pt-8 sm:px-6 sm:pt-10 lg:px-8;
+}
+
+@utility glass-panel {
+	@apply rounded-3xl border border-line bg-surface/85 backdrop-blur-xl;
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
 @layer base {
@@ -29,17 +75,16 @@
 	}
 
 	:root {
-		color-scheme: dark;
-		background-color: #121112;
+		background-color: var(--page-bottom);
 	}
 
 	body {
 		font-family: var(--font-sans);
 		color: var(--color-ink);
 		background:
-			radial-gradient(900px 500px at 10% -10%, #452023, transparent 60%),
-			radial-gradient(700px 500px at 110% 10%, #301d24, transparent 60%),
-			linear-gradient(180deg, #171415, #121112);
+			radial-gradient(900px 500px at 10% -10%, var(--glow-red), transparent 60%),
+			radial-gradient(700px 500px at 110% 10%, var(--glow-rose), transparent 60%),
+			linear-gradient(180deg, var(--page-top), var(--page-bottom));
 		min-height: 100vh;
 	}
 
@@ -54,6 +99,15 @@
 	a {
 		color: inherit;
 		text-decoration: none;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 4px;
+	}
+
+	button {
+		cursor: pointer;
 	}
 
 	a:hover {

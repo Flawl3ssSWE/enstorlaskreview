@@ -213,16 +213,8 @@
 		content="Läskrecensioner med fokus på smak, kolsyra och prisvärdhet. Hitta din nästa favorit hos En Stor Läsk Review."
 	/>
 </svelte:head>
-<section class="relative overflow-hidden px-4 pb-14 pt-8 sm:px-8 sm:pt-10">
-	<div class="pointer-events-none absolute inset-0 -z-10">
-		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-surface-raised blur-3xl"></div>
-		<div class="absolute right-0 top-20 h-80 w-80 rounded-full bg-red-950/25 blur-3xl"></div>
-		<div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-rose-950/20 blur-3xl"></div>
-	</div>
-
-	<div
-		class="mx-auto w-full max-w-6xl rounded-[2rem] border border-line bg-surface p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_16px_40px_-34px_rgba(0,0,0,0.65)] backdrop-blur-2xl sm:p-8"
-	>
+<section class="page-shell">
+	<div class="mx-auto w-full max-w-6xl">
 		<p class="text-xs font-semibold uppercase tracking-[0.34em] text-accent">En stor läsk review</p>
 		<h1 class="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-ink sm:text-5xl">
 			Hitta din nästa favoritläsk.
@@ -231,9 +223,7 @@
 			Smak, bubblor och betyg. Hitta något gott till nästa glas.
 		</p>
 
-		<div
-			class="mt-6 rounded-2xl border border-line bg-surface-raised p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:p-5"
-		>
+		<div class="mt-8 border-y border-line py-5">
 			<div class="grid grid-cols-2 gap-3 lg:flex lg:items-end">
 				<div class="col-span-2 flex min-w-0 flex-1 items-center gap-2">
 					<div class="min-w-0 flex-1">
@@ -268,7 +258,7 @@
 					<select
 						bind:value={reviewer}
 						onchange={() => updateUrl(search, sort)}
-						class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-4 text-sm font-semibold text-secondary focus:ring-2 focus:ring-red-300"
+						class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-4 text-sm font-semibold text-secondary focus:ring-2 focus:ring-accent/40"
 					>
 						<option value="">Alla recensenter</option>
 						{#each reviewers as [key, name]}<option value={key}>{capitalizeAuthorName(name)}</option
@@ -282,7 +272,7 @@
 					<select
 						value={sort}
 						onchange={handleSortChange}
-						class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-4 text-sm font-semibold text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none backdrop-blur-md focus:ring-2 focus:ring-red-300"
+						class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-4 text-sm font-semibold text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none backdrop-blur-md focus:ring-2 focus:ring-accent/40"
 					>
 						{#each sortOptions as option}
 							<option value={option.value}>{option.label}</option>
@@ -297,7 +287,7 @@
 						<select
 							bind:value={brand}
 							onchange={() => updateUrl(search, sort)}
-							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-red-300"
+							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-accent/40"
 						>
 							<option value="">Alla märken</option>
 							{#each brands as name}<option value={name}>{name}</option>{/each}
@@ -308,7 +298,7 @@
 						<select
 							bind:value={container}
 							onchange={() => updateUrl(search, sort)}
-							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-red-300"
+							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-accent/40"
 						>
 							<option value="">Alla förpackningar</option>
 							{#each DRINK_CONTAINERS as name}<option value={name}>{name}</option>{/each}
@@ -319,7 +309,7 @@
 						<select
 							bind:value={minRating}
 							onchange={() => updateUrl(search, sort)}
-							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-red-300"
+							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-accent/40"
 						>
 							<option value={0}>Alla betyg</option>
 							<option value={1}>Minst 1 av 3</option>
@@ -339,7 +329,7 @@
 								maxPrice = parseMaxPrice(event.currentTarget.value);
 								updateUrl(search, sort);
 							}}
-							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink placeholder:text-muted focus:ring-2 focus:ring-red-300"
+							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink placeholder:text-muted focus:ring-2 focus:ring-accent/40"
 						/>
 					</label>
 				</div>
@@ -353,7 +343,7 @@
 									value={type.value}
 									bind:group={drinkTypes}
 									onchange={() => updateUrl(search, sort)}
-									class="h-4 w-4 accent-red-400"
+									class="h-4 w-4 accent-accent"
 								/>{type.label}
 							</label>
 						{/each}
@@ -364,7 +354,7 @@
 						type="checkbox"
 						bind:checked={favorite}
 						onchange={() => updateUrl(search, sort)}
-						class="h-4 w-4 accent-red-400"
+						class="h-4 w-4 accent-accent"
 					/>
 					Endast läskfavoriter
 				</label>
@@ -401,9 +391,14 @@
 		</div>
 	{/if}
 
-	<div class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+	<div
+		class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-x-5 gap-y-6 sm:grid-cols-2 lg:grid-cols-3"
+	>
 		{#each searchableBars as bar}
-			<a href={resolve('/[slug]', { slug: bar.slug }) + '/'} class="block hover:no-underline">
+			<a
+				href={resolve('/[slug]', { slug: bar.slug }) + '/'}
+				class="row-span-4 grid grid-rows-subgrid rounded-3xl hover:no-underline focus-visible:outline-accent"
+			>
 				<Card
 					drink={bar}
 					title={bar.title}

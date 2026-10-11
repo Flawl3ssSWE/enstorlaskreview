@@ -380,7 +380,9 @@ test('soda detail shows separate soda and venue ratings', async ({ page }) => {
 	await page.goto('hallonsoda/');
 	await expect(page.getByRole('heading', { name: 'Läskbetyg', exact: true })).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Betyg på stället', exact: true })).toBeVisible();
-	await expect(page.getByText('2/3', { exact: true })).toBeVisible();
+	await expect(
+		page.getByRole('img', { name: 'Läskens helhetsbetyg 2 av 3', exact: true })
+	).toBeVisible();
 	await expect(page.getByText('25 kr', { exact: true })).toBeVisible();
 	await expect(page.getByText('Matchar namnet', { exact: true })).toBeVisible();
 	await expect(page.locator('main a[href*="google.com/maps"]')).toHaveCount(0);
@@ -403,13 +405,17 @@ test('reviews of the same soda have separate pages, cards and reviewer filters',
 	await expect(page.getByText('Läskfavorit', { exact: true })).toBeVisible();
 	await expect(page.getByText(/Återköpspotential/)).toHaveCount(0);
 	await page.locator('main a[href*="testsoda"]').click();
-	await expect(page.getByText('3/3', { exact: true })).toBeVisible();
+	await expect(
+		page.getByRole('img', { name: 'Läskens helhetsbetyg 3 av 3', exact: true })
+	).toBeVisible();
 	await expect(page.getByText('Frisk och balanserad enligt Alex.', { exact: true })).toBeVisible();
 	await expect(page.getByRole('combobox', { name: 'Visa betyg och recension' })).toHaveCount(0);
 	await expect(page.getByText(/Återköpspotential: 5\/5/)).toBeVisible();
 	await page.goto('testsoda-robin/');
 	await expect(page.getByText(/Återköpspotential: 0\/5/)).toBeVisible();
-	await expect(page.getByText('0/3', { exact: true })).toBeVisible();
+	await expect(
+		page.getByRole('img', { name: 'Läskens helhetsbetyg 0 av 3', exact: true })
+	).toBeVisible();
 	await expect(page.getByText('Alldeles för söt enligt Robin.', { exact: true })).toBeVisible();
 	await expect(page.getByText('Läskfavorit', { exact: true })).toHaveCount(0);
 });
