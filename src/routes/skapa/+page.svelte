@@ -99,7 +99,7 @@
 	const previewScore = $derived(
 		SODA_RATING_METRICS.every(({ key }) => {
 			const value = sodaRatings[key];
-			return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 5;
+			return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 5;
 		})
 			? sodaScore(sodaRatings)
 			: undefined
@@ -727,7 +727,7 @@
 					</p>
 				{:else}
 					<p class="mt-2 text-sm text-secondary">
-						Fyll i alla läskbetyg med värden mellan 0 och 5 för att se totalbetyget.
+						Fyll i alla läskbetyg med heltal mellan 0 och 5 för att se totalbetyget.
 					</p>
 				{/if}
 				<p class="mt-2 text-sm text-muted">

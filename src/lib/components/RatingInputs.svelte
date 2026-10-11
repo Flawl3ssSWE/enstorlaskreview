@@ -26,7 +26,7 @@
 				type="number"
 				min="0"
 				max="5"
-				step="0.5"
+				step="1"
 				required
 				bind:value={values[metric.key]}
 				class="mt-3 w-full rounded-lg border border-line bg-surface p-2 focus:outline-accent"

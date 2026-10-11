@@ -57,7 +57,7 @@ test('generator downloads one flat review with one price and a separate compress
 	await page.getByLabel('Återköpspotential (valfritt)').selectOption('0');
 	await page.getByLabel('Betygsätt stället också').check();
 	for (const metric of SODA_RATING_METRICS)
-		await page.locator(`#soda-${metric.key}`).fill(metric.key === 'sweetness' ? '3' : '4.5');
+		await page.locator(`#soda-${metric.key}`).fill(metric.key === 'sweetness' ? '3' : '5');
 	for (const metric of VENUE_RATING_METRICS) await page.locator(`#venue-${metric.key}`).fill('0');
 	const { json, filename } = await exportJson(page);
 	expect(filename).toBe('ny-hallonsoda-test.json');
@@ -629,6 +629,8 @@ test('total rating preview updates with soda scores and matches exported JSON', 
 	await page.locator('#soda-carbonation').fill('');
 	await expect(preview).toContainText('Fyll i alla läskbetyg');
 	await expect(preview.getByText(/^[0-3]\/3$/)).toHaveCount(0);
+	await page.locator('#soda-carbonation').fill('2.5');
+	await expect(preview).toContainText('Fyll i alla läskbetyg med heltal');
 	await page.locator('#soda-carbonation').fill('6');
 	await expect(preview).toContainText('Fyll i alla läskbetyg');
 	await page
@@ -733,42 +735,29 @@ test('nutrient bases convert, export, reload and reset independently', async ({ 
 	await expect(page.locator('#protein')).toHaveValue('');
 });
 
-test('home drink filters combine, survive reload and clear, with compact nutritional facts', async ({
+test('home drink filters combine, survive reload and clear, with compact cards', async ({
 	page
 }) => {
 	await page.goto('./?drinkType=energy&drinkType=sugar-free&drinkType=protein');
-	await expect(page.getByLabel('Energidryck', { exact: true })).toBeChecked();
-	await expect(page.getByLabel('Sockerfri', { exact: true })).toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Energidryck', exact: true })).toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Sockerfri', exact: true })).toBeChecked();
 	await expect(page.getByRole('heading', { name: 'Testläsk', exact: true })).toBeVisible();
 	await page.setViewportSize({ width: 375, height: 812 });
-	const facts = page.locator('[aria-label="Drycksfakta"]');
-	await expect(facts.getByText('KPL 0 g', { exact: true })).toBeVisible();
-	await expect(facts.getByText('PPL 20 g', { exact: true })).toBeVisible();
-	await expect(
-		page
-			.getByRole('link')
-			.filter({ has: page.getByRole('heading', { name: 'Testläsk', exact: true }) })
-			.getByText(/Koffein/)
-	).toHaveCount(0);
-	const imageBox = await page
-		.getByRole('img', { name: 'Testläsk', exact: true })
-		.locator('..')
-		.boundingBox();
-	const imageAreaBox = await page
-		.getByRole('img', { name: 'Testläsk', exact: true })
-		.locator('../..')
-		.boundingBox();
-	expect(imageBox!.height).toBeCloseTo(imageAreaBox!.height, 1);
-	const factsBox = await facts.boundingBox();
-	expect(imageBox!.y + imageBox!.height).toBeLessThanOrEqual(factsBox!.y);
-	expect(await facts.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-	await page.getByLabel('Sockerfri', { exact: true }).uncheck();
-	await page.getByLabel('Sockrad', { exact: true }).check();
+	const card = page
+		.getByRole('link')
+		.filter({ has: page.getByRole('heading', { name: 'Testläsk', exact: true }) });
+	await expect(card.locator('[aria-label="Drycksfakta"]')).toHaveCount(0);
+	await expect(card.getByText(/Koffein|KPL|PPL|LPK/)).toHaveCount(0);
+	await expect(card.getByText('Märke ej angivet', { exact: true })).toHaveCount(0);
+	await expect(card.getByText('20 kr', { exact: true })).toBeVisible();
+	expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+	await page.getByRole('checkbox', { name: 'Sockerfri', exact: true }).uncheck();
+	await page.getByRole('checkbox', { name: 'Sockrad', exact: true }).check();
 	await expect(page.getByRole('heading', { name: 'Testläsk', exact: true })).toHaveCount(0);
 	await page.reload();
-	await expect(page.getByLabel('Sockrad', { exact: true })).toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Sockrad', exact: true })).toBeChecked();
 	await page.getByRole('button', { name: /Rensa/ }).click();
-	await expect(page.getByLabel('Sockrad', { exact: true })).not.toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Sockrad', exact: true })).not.toBeChecked();
 	await page.goto('testsoda/');
 	await expect(
 		page.getByText('KPL (kolhydrat per läsk): 0 g/100 ml · 0 g i hela förpackningen', {
@@ -901,7 +890,7 @@ test('electrolyte category is editable, survives import and reset, and combines 
 	page
 }) => {
 	await fillReview(page);
-	await page.getByLabel('Elektrolytdryck', { exact: true }).check();
+	await page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true }).check();
 	const { json } = await exportJson(page);
 	expect(json.isElectrolyteDrink).toBe(true);
 	await page.getByLabel('Recensionens JSON-fil', { exact: true }).setInputFiles({
@@ -912,27 +901,29 @@ test('electrolyte category is editable, survives import and reset, and combines 
 	await expect(
 		page.getByRole('heading', { name: 'Redigera recension', exact: true })
 	).toBeVisible();
-	await expect(page.getByLabel('Elektrolytdryck', { exact: true })).toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true })).toBeChecked();
 	await page.getByRole('button', { name: 'Skapa ny recension', exact: true }).click();
-	await expect(page.getByLabel('Elektrolytdryck', { exact: true })).not.toBeChecked();
+	await expect(
+		page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true })
+	).not.toBeChecked();
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
-	await expect(page.getByLabel('Elektrolytdryck', { exact: true })).toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true })).toBeChecked();
 	await page.getByRole('button', { name: 'Använd automatiska dryckstyper', exact: true }).click();
-	await expect(page.getByLabel('Elektrolytdryck', { exact: true })).toBeChecked();
-	await page.getByLabel('Elektrolytdryck', { exact: true }).uncheck();
+	await expect(page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true })).toBeChecked();
+	await page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true }).uncheck();
 	expect((await exportJson(page)).json.isElectrolyteDrink).toBe(false);
 	await page.goto('./?drinkType=electrolyte&drinkType=energy&drinkType=sugar-free');
-	await expect(page.getByLabel('Elektrolytdryck', { exact: true })).toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true })).toBeChecked();
 	const card = page
 		.getByRole('link')
 		.filter({ has: page.getByRole('heading', { name: 'Testläsk', exact: true }) });
-	await expect(card.getByText('Elektrolytdryck', { exact: true })).toBeVisible();
+	await expect(card.getByRole('img', { name: 'Elektrolytdryck', exact: true })).toBeVisible();
 	await page.setViewportSize({ width: 375, height: 812 });
 	expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 	await page.reload();
-	await expect(page.getByLabel('Elektrolytdryck', { exact: true })).toBeChecked();
+	await expect(page.getByRole('checkbox', { name: 'Elektrolytdryck', exact: true })).toBeChecked();
 	await page.goto('testsoda/');
-	await expect(page.getByText('Elektrolytdryck', { exact: true })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Om elektrolytdryck', exact: true })).toBeVisible();
 });
 
 test('automatic soda IDs follow the drink name, exclude author names and preserve explicit IDs', async ({

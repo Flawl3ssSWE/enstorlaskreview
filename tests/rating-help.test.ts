@@ -42,6 +42,22 @@ test('generator keeps labelled inputs and their rating descriptions', async ({ p
 	await expect(sweetness).toHaveAccessibleDescription(/0 = inte söt, 3 = perfekt, 5 = för söt/);
 	await expect(page.locator('#soda-sweetness-help')).toBeVisible();
 	await expect(page.locator('#soda-mouthfeel-help')).toBeVisible();
+	await expect(sweetness).toHaveAttribute('step', '1');
 	await sweetness.fill('4.5');
-	await expect(sweetness).toHaveValue('4.5');
+	expect(
+		await sweetness.evaluate((input) => (input as HTMLInputElement).validity.stepMismatch)
+	).toBe(true);
+	await sweetness.fill('4');
+	expect(await sweetness.evaluate((input) => (input as HTMLInputElement).validity.valid)).toBe(
+		true
+	);
+	await page.getByLabel('Betygsätt stället också').check();
+	const service = page.locator('#venue-service');
+	await expect(service).toHaveAttribute('step', '1');
+	await service.fill('3.5');
+	expect(await service.evaluate((input) => (input as HTMLInputElement).validity.stepMismatch)).toBe(
+		true
+	);
+	await service.fill('3');
+	expect(await service.evaluate((input) => (input as HTMLInputElement).validity.valid)).toBe(true);
 });

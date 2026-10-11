@@ -1,9 +1,19 @@
 <script lang="ts">
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, type Snippet } from 'svelte';
 
 	const generatedId = $props.id();
-	let { label, text, id = generatedId }: { label: string; text: string; id?: string } = $props();
+	let {
+		label,
+		text,
+		id = generatedId,
+		children
+	}: {
+		label: string;
+		text: string;
+		id?: string;
+		children?: Snippet;
+	} = $props();
 	let trigger: HTMLButtonElement;
 	let panel: HTMLDivElement;
 	let open = $state(false);
@@ -48,7 +58,7 @@
 	onclick={show}
 	class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
 >
-	<CircleHelp size={16} aria-hidden="true" />
+	{#if children}{@render children()}{:else}<CircleHelp size={16} aria-hidden="true" />{/if}
 </button>
 <div
 	bind:this={panel}

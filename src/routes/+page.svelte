@@ -397,7 +397,7 @@
 		{#each searchableBars as bar}
 			<a
 				href={resolve('/[slug]', { slug: bar.slug }) + '/'}
-				class="row-span-4 grid grid-rows-subgrid rounded-3xl hover:no-underline focus-visible:outline-accent"
+				class="row-span-2 grid grid-rows-subgrid rounded-3xl hover:no-underline focus-visible:outline-accent"
 			>
 				<Card
 					drink={bar}
@@ -406,7 +406,6 @@
 					rating={bar.rating}
 					favorite={favoriteLabel(bar)}
 					location={bar.location}
-					beerBrand={bar.beerBrand}
 					beerPriceKr={bar.beerPriceKr}
 					isHappyHourPrice={bar.isHappyHourPrice}
 					image={bar.image}

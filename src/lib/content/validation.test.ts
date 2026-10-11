@@ -2,10 +2,43 @@ import { describe, expect, it } from 'vitest';
 import sodaFixture from '../../../tests/fixtures/content/testsoda.json';
 import fixture from '../../../tests/fixtures/content/testbaren.json';
 import { DRINK_CONTAINERS, SODA_RATING_METRICS, VENUE_RATING_METRICS } from '../review-metadata';
-import { validateReview } from './validation';
+import { isSafeSlug, validateReview } from './validation';
 import { projectPublishedReview, publicReviewFilter } from '../../../tools/migration/projection';
 
 describe('repository content and migration boundary', () => {
+	it.each([0.5, 2.5, 4.5])('rejects fractional soda, venue, and legacy ratings: %s', (score) => {
+		expect(() =>
+			validateReview(
+				{ ...sodaFixture, sodaRatings: { ...sodaFixture.sodaRatings, taste: score } },
+				'testsoda.json'
+			)
+		).toThrow('måste vara ett heltal mellan 0 och 5');
+		expect(() =>
+			validateReview(
+				{
+					...sodaFixture,
+					venueRatings: {
+						atmosphere: 3,
+						service: score,
+						selection: 3,
+						cleanliness: 3,
+						soundLevel: 3
+					}
+				},
+				'testsoda.json'
+			)
+		).toThrow('måste vara ett heltal mellan 0 och 5');
+		expect(() => validateReview({ ...fixture, atmosphere: score }, 'testbaren.json')).toThrow(
+			'måste vara ett heltal mellan 0 och 5'
+		);
+	});
+	it('reserves the permanent demo route for its separate example data', () => {
+		expect(isSafeSlug('demo')).toBe(false);
+		expect(isSafeSlug('Demo')).toBe(false);
+		expect(() => validateReview({ ...sodaFixture, slug: 'demo' }, 'demo.json')).toThrow(
+			'Filnamnet måste motsvara en unik, säker slug.'
+		);
+	});
 	it('derives the weighted rating and retains public data', () => {
 		expect(validateReview(fixture, 'testbaren.json')).toEqual({ ...fixture, rating: 2 });
 	});

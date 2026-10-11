@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	drinkTypeLabels,
 	suggestDrinkTypes,
 	nutrientAmounts,
 	nutritionFacts,
@@ -90,5 +91,37 @@ describe('editor drink type suggestions', () => {
 					carbohydrateGPer100Ml: value
 				})
 			).toEqual({ isEnergyDrink: false, isProteinDrink: false, sugarType: undefined });
+	});
+});
+
+describe('explicit caffeine amounts and drink categories', () => {
+	it('does not substitute zero for unknown caffeine or infer it from a category', () => {
+		for (const drink of [
+			{},
+			{ volumeMl: 330 },
+			{ isEnergyDrink: false },
+			{ isEnergyDrink: true },
+			{ sugarType: 'sugar-free' as const }
+		]) {
+			expect(nutritionFacts(drink).find((fact) => fact.short === 'Koffein')).toBeUndefined();
+		}
+	});
+	it('preserves explicitly entered zero in either caffeine basis', () => {
+		for (const drink of [
+			{ caffeineMgPer100Ml: 0, volumeMl: 330 },
+			{ caffeineMgPerContainer: 0, volumeMl: 500 }
+		]) {
+			expect(nutritionFacts(drink)).toMatchObject([
+				{ short: 'Koffein', per100Ml: 0, perContainer: 0 }
+			]);
+		}
+	});
+	it('shows caffeine independently of an energy drink classification', () => {
+		const drink = { caffeineMgPer100Ml: 10, isEnergyDrink: false, isElectrolyteDrink: false };
+		expect(nutritionFacts(drink)).toMatchObject([{ short: 'Koffein', per100Ml: 10 }]);
+		expect(drinkTypeLabels(drink)).toEqual([]);
+		expect(
+			drinkTypeLabels({ isEnergyDrink: true, isElectrolyteDrink: true, sugarType: 'sugared' })
+		).toEqual(['Energidryck', 'Elektrolytdryck', 'Sockrad']);
 	});
 });

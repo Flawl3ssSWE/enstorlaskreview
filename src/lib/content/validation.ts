@@ -13,6 +13,7 @@ import { isValidBeerPriceKr } from '../utils/price.ts';
 import type { PublicReview, ReviewContent } from '../types/bar-review.ts';
 
 const RESERVED_SLUGS = new Set([
+	'demo',
 	'about',
 	'skapa',
 	'karta',
@@ -190,11 +191,11 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 			if (key === 'mouthfeelMatch' && ratings[key] === undefined) continue;
 			if (
 				typeof ratings[key] !== 'number' ||
-				!Number.isFinite(ratings[key]) ||
+				!Number.isInteger(ratings[key]) ||
 				(ratings[key] as number) < 0 ||
 				(ratings[key] as number) > 5
 			)
-				fail(`${label}: ${key} måste vara mellan 0 och 5.`);
+				fail(`${label}: ${key} måste vara ett heltal mellan 0 och 5.`);
 		}
 	};
 	if (data.recommended !== undefined && typeof data.recommended !== 'boolean')
@@ -225,11 +226,11 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 		for (const { key } of REVIEW_RATING_METRICS) {
 			if (
 				typeof data[key] !== 'number' ||
-				!Number.isFinite(data[key]) ||
+				!Number.isInteger(data[key]) ||
 				(data[key] as number) < 0 ||
 				(data[key] as number) > 5
 			)
-				fail(`${key} måste vara mellan 0 och 5.`);
+				fail(`${key} måste vara ett heltal mellan 0 och 5.`);
 		}
 	}
 	if (data.beerPriceKr !== undefined && !isValidBeerPriceKr(data.beerPriceKr as number))
