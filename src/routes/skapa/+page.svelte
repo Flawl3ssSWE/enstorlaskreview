@@ -19,6 +19,7 @@
 	import { sodaScore } from '$lib/content/soda';
 	import { ratingFromAverage } from '$lib/utils/ratings';
 	import { generateSlug, generateSodaId } from '$lib/utils/slug';
+	import { decodeReviewImage } from '$lib/utils/image-upload';
 	import type {
 		DrinkContainer,
 		SodaRatingValues,
@@ -153,11 +154,10 @@
 		imageBusy = !!file;
 		if (!file) return;
 		try {
-			if (file.size > 10 * 1024 * 1024 || !/\.(jpe?g|png|webp)$/i.test(file.name))
-				throw new Error('Välj en JPEG-, PNG- eller WebP-bild på högst 10 MiB.');
-			const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+			const bitmap = await decodeReviewImage(file);
 			let blob: Blob | null = null;
 			try {
+				if (current !== selection) return;
 				const canvas = document.createElement('canvas');
 				const context = canvas.getContext('2d');
 				if (!context) throw new Error('Bilden kunde inte behandlas.');
@@ -192,7 +192,7 @@
 				imageError =
 					cause instanceof Error && !(cause instanceof DOMException)
 						? cause.message
-						: 'Bilden kunde inte läsas. Välj en giltig JPEG-, PNG- eller WebP-bild.';
+						: 'Bilden kunde inte läsas. Välj en giltig JPEG-, PNG-, WebP-, HEIC- eller HEIF-bild.';
 		} finally {
 			if (current === selection) imageBusy = false;
 		}
@@ -784,14 +784,15 @@
 				>Bild till recensionen<input
 					id="image"
 					type="file"
-					accept="image/jpeg,image/png,image/webp"
+					accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
 					onchange={selectImage}
 					class={inputClass}
 				/></label
 			>
 			<p class="text-sm text-muted">
-				Välj en bild på högst 10 MiB. Bilden roteras, skalas till högst 1 600 pixlar och komprimeras
-				till WebP på högst 500 KiB. Originalets metadata, inklusive GPS-position, tas bort.
+				Välj en JPEG-, PNG-, WebP-, HEIC- eller HEIF-bild på högst 10 MiB. Bilden roteras, skalas
+				till högst 1 600 pixlar och komprimeras till WebP på högst 500 KiB. Originalets metadata,
+				inklusive GPS-position, tas bort.
 			</p>
 			{#if imageBusy}<p role="status">Behandlar bilden…</p>{/if}
 			{#if imageError}<p role="alert" class="text-accent">{imageError}</p>{/if}

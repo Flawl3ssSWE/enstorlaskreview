@@ -43,6 +43,7 @@
 		"yaml": "2.9.0"
 	},
 	"dependencies": {
+		"heic-to": "1.6.5",
 		"maplibre-gl": "6.4.1",
 		"markdown-it": "14.3.1"
 	},

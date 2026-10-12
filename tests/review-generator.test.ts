@@ -153,6 +153,62 @@ test('large images are resized and compressed without source EXIF metadata', asy
 	expect(dimensions[0] / dimensions[1]).toBeCloseTo(4 / 3, 2);
 });
 
+for (const name of ['photo.HEIC', 'photo.heif']) {
+	test(`${name} converts locally to an upright WebP under the static CSP`, async ({ page }) => {
+		await fillReview(page);
+		const errors: string[] = [];
+		page.on('pageerror', (error) => errors.push(error.message));
+		await page.evaluate(() => {
+			document.addEventListener('securitypolicyviolation', (event) => {
+				throw new Error(`CSP violation: ${event.violatedDirective}`);
+			});
+		});
+		await page.getByLabel('Bild till recensionen').setInputFiles({
+			name,
+			mimeType: 'application/octet-stream',
+			buffer: await readFile('tests/fixtures/uploads/orientation-6.heic')
+		});
+		await expect(page.getByText(/Komprimerad bild:/)).toBeVisible({ timeout: 30000 });
+		const dimensions = await page.evaluate(async () => {
+			const image = document.querySelector<HTMLImageElement>(
+				'img[alt="Förhandsvisning av recensionsbild"]'
+			)!;
+			await image.decode();
+			return [image.naturalWidth, image.naturalHeight];
+		});
+		expect(dimensions).toEqual([1200, 800]);
+		const { json } = await exportJson(page);
+		expect(json.image).toBe('ny-hallonsoda-test.webp');
+		const downloadPromise = page.waitForEvent('download');
+		await page.getByRole('button', { name: 'Ladda ner bild' }).click();
+		const bytes = await readFile((await (await downloadPromise).path())!);
+		expect(bytes.subarray(0, 4).toString()).toBe('RIFF');
+		expect(bytes.subarray(8, 12).toString()).toBe('WEBP');
+		expect(bytes.length).toBeLessThanOrEqual(500 * 1024);
+		expect(bytes.includes(Buffer.from('Exif'))).toBe(false);
+		expect(errors).toEqual([]);
+	});
+}
+
+test('invalid HEIC reports a Swedish error and allows choosing another image', async ({ page }) => {
+	await page.goto('skapa/');
+	await page.getByLabel('Bild till recensionen').setInputFiles({
+		name: 'broken.heic',
+		mimeType: 'image/heic',
+		buffer: Buffer.from('not an image')
+	});
+	await expect(page.getByRole('alert')).toHaveText(
+		'HEIC-/HEIF-bilden kunde inte läsas. Välj en annan bild.',
+		{ timeout: 30000 }
+	);
+	await expect(page.getByText('Behandlar bilden…')).toHaveCount(0);
+	await page
+		.getByLabel('Bild till recensionen')
+		.setInputFiles('tests/fixtures/images/test-bar.png');
+	await expect(page.getByText(/Komprimerad bild:/)).toBeVisible();
+	await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
 test('replacing a PNG uses a new WebP filename in the edited JSON', async ({ page }) => {
 	await page.goto('skapa/');
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
