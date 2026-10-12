@@ -228,14 +228,18 @@ test('image positioning previews and exports the crop for new and existing revie
 }) => {
 	await fillReview(page);
 	const preview = page.getByRole('img', { name: 'Förhandsvisning av recensionsbild' });
-	const horizontal = page.getByRole('slider', { name: /Vågrät bildposition/ });
-	const vertical = page.getByRole('slider', { name: /Lodrät bildposition/ });
+	const editor = page.getByRole('button', { name: 'Justera bildens utsnitt' });
 	await expect(preview).toHaveCSS('object-fit', 'cover');
-	await expect(preview).toHaveCSS('aspect-ratio', '16 / 9');
-	await horizontal.focus();
-	await horizontal.press('Home');
-	await vertical.focus();
-	await vertical.press('End');
+	await expect(preview).toHaveCSS('aspect-ratio', '1 / 1');
+	await expect(page.getByRole('slider', { name: /bildposition/ })).toHaveCount(0);
+	await page.getByRole('slider', { name: /Zoom:/ }).focus();
+	await page.getByRole('slider', { name: /Zoom:/ }).press('End');
+	await editor.scrollIntoViewIfNeeded();
+	const bounds = (await editor.boundingBox())!;
+	await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(bounds.x + bounds.width * 2, bounds.y - bounds.height, { steps: 5 });
+	await page.mouse.up();
 	await expect(preview).toHaveCSS('object-position', '0% 100%');
 	expect((await exportJson(page)).json).toMatchObject({ imageFocusX: 0, imageFocusY: 100 });
 	await page.getByRole('button', { name: 'Centrera bilden' }).click();
@@ -243,10 +247,8 @@ test('image positioning previews and exports the crop for new and existing revie
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
 	await expect(preview).toHaveAttribute('src', `${basePath}/images/test-bar.png`);
 	await expect(preview).toHaveCSS('object-position', '25% 75%');
-	await expect(horizontal).toHaveValue('25');
-	await expect(vertical).toHaveValue('75');
-	await vertical.focus();
-	await vertical.press('Home');
+	await editor.focus();
+	for (let i = 0; i < 8; i++) await editor.press('Shift+ArrowDown');
 	await expect(preview).toHaveCSS('object-position', '25% 0%');
 	expect((await exportJson(page)).json).toMatchObject({
 		image: 'test-bar.png',
@@ -270,6 +272,61 @@ test('image positioning previews and exports the crop for new and existing revie
 	);
 });
 
+test('touch dragging follows the image crop and leaves uncropped axes centered', async ({
+	page
+}) => {
+	await fillReview(page);
+	const editor = page.getByRole('button', { name: 'Justera bildens utsnitt' });
+	const preview = page.getByRole('img', { name: 'Förhandsvisning av recensionsbild' });
+	const touch = await page.context().newCDPSession(page);
+	for (const [width, height, expected] of [
+		[800, 400, '25% 50%'],
+		[400, 800, '50% 25%'],
+		[400, 400, '50% 50%']
+	] as const) {
+		const png = await page.evaluate(
+			([width, height]) => {
+				const canvas = document.createElement('canvas');
+				canvas.width = width;
+				canvas.height = height;
+				return canvas.toDataURL('image/png').split(',')[1];
+			},
+			[width, height]
+		);
+		await page.getByRole('button', { name: 'Centrera bilden' }).click();
+		await page.getByLabel('Bild till recensionen').setInputFiles({
+			name: 'crop.png',
+			mimeType: 'image/png',
+			buffer: Buffer.from(png, 'base64')
+		});
+		await expect(page.getByText('Behandlar bilden…', { exact: true })).toHaveCount(0);
+		await expect(preview).toHaveCSS('object-position', '50% 50%');
+		await expect
+			.poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalWidth))
+			.toBe(width);
+		await editor.scrollIntoViewIfNeeded();
+		const bounds = (await editor.boundingBox())!;
+		const start = {
+			x: bounds.x + bounds.width / 2,
+			y: bounds.y + bounds.height / 2
+		};
+		await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] });
+		const distance = await editor.evaluate((element) => element.clientWidth / 4);
+		await touch.send('Input.dispatchTouchEvent', {
+			type: 'touchMove',
+			touchPoints: [{ x: start.x + distance, y: start.y + distance }]
+		});
+		await touch.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+		await expect(preview).toHaveCSS('object-position', expected);
+		await editor.dispatchEvent('pointermove', {
+			pointerId: 2,
+			clientX: start.x,
+			clientY: start.y
+		});
+		await expect(preview).toHaveCSS('object-position', expected);
+	}
+});
+
 test('zoom previews, resets and persists on review pages, cards and imports', async ({ page }) => {
 	await fillReview(page);
 	const preview = page.getByRole('img', { name: 'Förhandsvisning av recensionsbild' });
@@ -278,15 +335,15 @@ test('zoom previews, resets and persists on review pages, cards and imports', as
 	await zoom.focus();
 	await zoom.press('End');
 	await expect(preview).toHaveCSS('transform', 'matrix(3, 0, 0, 3, 0, 0)');
-	const horizontal = page.getByRole('slider', { name: /Vågrät bildposition/ });
-	await horizontal.focus();
-	await horizontal.press('Home');
+	const editor = page.getByRole('button', { name: 'Justera bildens utsnitt' });
+	await editor.focus();
+	for (let i = 0; i < 5; i++) await editor.press('Shift+ArrowRight');
 	await expect(preview).toHaveAttribute('style', /transform-origin: 0% 50%/);
 	expect((await exportJson(page)).json).toMatchObject({ imageZoom: 3, imageFocusX: 0 });
 	await expect(preview.locator('..')).toHaveCSS('overflow', 'hidden');
 	await page.getByRole('button', { name: 'Återställ utsnitt' }).click();
 	await expect(zoom).toHaveValue('1');
-	await expect(horizontal).toHaveValue('50');
+	await expect(preview).toHaveCSS('object-position', '50% 50%');
 	await expect(preview).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
 	await expect(zoom).toHaveValue('1.5');

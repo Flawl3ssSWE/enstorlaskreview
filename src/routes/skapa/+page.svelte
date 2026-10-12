@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { base } from '$app/paths';
-	import ReviewImage from '$lib/components/ReviewImage.svelte';
+	import ImagePositionEditor from '$lib/components/ImagePositionEditor.svelte';
 	import DrinkAmountFields from '$lib/components/DrinkAmountFields.svelte';
 	import NutrientInput from '$lib/components/NutrientInput.svelte';
 	import ContainerSelect from '$lib/components/ContainerSelect.svelte';
@@ -806,19 +806,16 @@
 			{#if previewSrc}
 				<div class="space-y-4">
 					<h3 class="font-semibold text-ink">Så visas bilden i recensionen</h3>
-					<div class="overflow-hidden rounded-3xl border border-line">
-						<ReviewImage
-							src={previewSrc}
-							alt="Förhandsvisning av recensionsbild"
-							focusX={imageFocusX}
-							focusY={imageFocusY}
-							zoom={imageZoom}
-						/>
-					</div>
+					<ImagePositionEditor
+						src={previewSrc}
+						bind:focusX={imageFocusX}
+						bind:focusY={imageFocusY}
+						zoom={imageZoom}
+					/>
 					<p id="image-position-help" class="text-sm text-muted">
-						Zooma från 100 till 300 % och justera utsnittet som visas i recensionen och på
-						recensionskortet. Originalbilden behålls. På stående bilder syns främst den lodräta
-						justeringen, på breda bilder den vågräta.
+						Dra bilden för att justera utsnittet som visas i recensionen och på recensionskortet. Du
+						kan också använda piltangenterna när bilden är markerad, och hålla Skift för större
+						steg. Zooma för att kunna flytta bilden mer. Originalbilden behålls.
 					</p>
 					<label class="block" for="image-zoom">
 						Zoom: {Math.round(imageZoom * 100)} %
@@ -829,32 +826,6 @@
 							max="3"
 							step="0.05"
 							bind:value={imageZoom}
-							aria-describedby="image-position-help"
-							class="mt-2 block w-full accent-ember"
-						/>
-					</label>
-					<label class="block" for="image-focus-x">
-						Vågrät bildposition: {imageFocusX} %
-						<input
-							id="image-focus-x"
-							type="range"
-							min="0"
-							max="100"
-							step="1"
-							bind:value={imageFocusX}
-							aria-describedby="image-position-help"
-							class="mt-2 block w-full accent-ember"
-						/>
-					</label>
-					<label class="block" for="image-focus-y">
-						Lodrät bildposition: {imageFocusY} %
-						<input
-							id="image-focus-y"
-							type="range"
-							min="0"
-							max="100"
-							step="1"
-							bind:value={imageFocusY}
 							aria-describedby="image-position-help"
 							class="mt-2 block w-full accent-ember"
 						/>
