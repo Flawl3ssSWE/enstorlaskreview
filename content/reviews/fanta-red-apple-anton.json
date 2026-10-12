@@ -1,0 +1,33 @@
+{
+	"title": "Fanta Red Apple",
+	"sodaId": "fanta-red-apple",
+	"slug": "fanta-red-apple-anton",
+	"image": "fanta-red-apple-anton-1791833148441.webp",
+	"location": "",
+	"createdAt": "2026-10-12T19:13:17.424Z",
+	"updatedAt": "2026-10-12T19:25:59.924Z",
+	"author": "Anton",
+	"description": "Först får man en rätt så god smak av äpple men sen blir den typ lite konstig i efter smaken, första tanken som slog mig vid första munnen var att det kändes som man druckit rök (OBS har dock ingen erfarenhet av det). Det förbättrades dock under burkens gång, så jag kanske borde låtit den luftas ett tag först.\n\nÄr en importerad läsk troligtvis från Egypten från början. Inköpt på GoBanana i Halmstad i helgen, gick ut för nio månader sedan enligt burkens botten, enligt importörens etikett så går den ut samma datum fast ett år efter datumet som står på botten, väldigt förvirrande. Har jag druckit gammal läsk eller inte?\n\nFun fact den har i princip lika mycket kolhydrater per 100 ml som rekommenderad blandning av sportdryck.",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaRatings": {
+		"taste": 4,
+		"sweetness": 2,
+		"carbonation": 5,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 5,
+		"drinkability": 3,
+		"matchesName": 5,
+		"value": 2
+	},
+	"volumeMl": 330,
+	"sugarType": "sugared",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"carbohydrateGPer100Ml": 13,
+	"beerBrand": "Fanta",
+	"beerPriceKr": 20,
+	"imageFocusX": 50,
+	"imageFocusY": 62.18274111675127,
+	"imageZoom": 1
+}
