@@ -23,6 +23,7 @@
 	"container": "Burk",
 	"volumeMl": 330,
 	"servingMethods": ["Originalförpackning"],
+	"sugarType": "sugar-free",
 	"servingTemperature": "Kylskåpskall",
 	"servedWithIce": false,
 	"beerBrand": "Fanta",
