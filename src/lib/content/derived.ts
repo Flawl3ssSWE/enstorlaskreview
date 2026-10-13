@@ -1,8 +1,13 @@
 import type { PublicReview } from '../types/bar-review';
 import type { PublicReviewMapData } from '../types/review-map';
-import type { PublicReviewStatistics, ReviewStatisticProduct } from '../types/review-statistics';
+import type {
+	PublicReviewStatistics,
+	ReviewStatisticProduct,
+	NutrientStatistic,
+	NutrientStatisticProduct
+} from '../types/review-statistics';
 import { isValidBeerPriceKr } from '../utils/price';
-import { drinkVolumeMl } from '../utils/drink-facts';
+import { drinkVolumeMl, nutrientAmounts } from '../utils/drink-facts';
 import { SODA_RATING_METRICS } from '../review-metadata';
 import { sodaScore, reviewerKey } from './soda';
 
@@ -52,13 +57,72 @@ export function buildReviewStatistics(reviews: PublicReview[]): PublicReviewStat
 					}
 				];
 	});
-	const extremes = (products: ReviewStatisticProduct[], direction: 'min' | 'max') => {
+	const extremes = <T extends ReviewStatisticProduct>(
+		products: T[],
+		direction: 'min' | 'max'
+	): T[] => {
 		if (!products.length) return [];
 		const value = Math[direction](...products.map((product) => product.value));
 		return products
 			.filter((product) => product.value === value)
 			.sort((a, b) => a.title.localeCompare(b.title, 'sv') || a.slug.localeCompare(b.slug));
 	};
+	const nutrients: NutrientStatistic[] = [
+		{
+			key: 'caffeine' as const,
+			label: 'Koffein',
+			unit: 'mg' as const,
+			per100Ml: 'caffeineMgPer100Ml' as const,
+			perContainer: 'caffeineMgPerContainer' as const
+		},
+		{
+			key: 'protein' as const,
+			label: 'Protein',
+			unit: 'g' as const,
+			per100Ml: 'proteinGPer100Ml' as const,
+			perContainer: 'proteinGPerContainer' as const
+		},
+		{
+			key: 'carbohydrate' as const,
+			label: 'Kolhydrater',
+			unit: 'g' as const,
+			per100Ml: 'carbohydrateGPer100Ml' as const,
+			perContainer: 'carbohydrateGPerContainer' as const
+		}
+	].map(({ key, label, unit, per100Ml, perContainer }) => {
+		const concentrations: NutrientStatisticProduct[] = [];
+		const totals: NutrientStatisticProduct[] = [];
+		for (const review of reviews) {
+			const amounts = nutrientAmounts(review[per100Ml], review[perContainer], review.volumeMl);
+			const product = {
+				title: review.title,
+				slug: review.slug,
+				author: review.author,
+				volumeMl: drinkVolumeMl(review)
+			};
+			if (
+				amounts.per100Ml !== undefined &&
+				Number.isFinite(amounts.per100Ml) &&
+				amounts.per100Ml >= 0
+			)
+				concentrations.push({ ...product, value: amounts.per100Ml });
+			if (
+				amounts.perContainer !== undefined &&
+				Number.isFinite(amounts.perContainer) &&
+				amounts.perContainer >= 0
+			)
+				totals.push({ ...product, value: amounts.perContainer });
+		}
+		return {
+			key,
+			label,
+			unit,
+			per100MlCount: concentrations.length,
+			perContainerCount: totals.length,
+			highestPer100Ml: extremes(concentrations, 'max'),
+			highestPerContainer: extremes(totals, 'max')
+		};
+	});
 	return {
 		totalReviews: reviews.length,
 		productCount: new Set(reviews.map((review) => review.sodaId ?? review.slug)).size,
@@ -87,6 +151,8 @@ export function buildReviewStatistics(reviews: PublicReview[]): PublicReviewStat
 			return { key, average: average(values), count: values.length };
 		}),
 		topRatedProducts: extremes(scored, 'max'),
-		bestValueProducts: extremes(unitPrices, 'min')
+		bestValueProducts: extremes(unitPrices, 'min'),
+		mostExpensiveProducts: extremes(unitPrices, 'max'),
+		nutrients
 	};
 }

@@ -2,6 +2,8 @@
 	import { resolve } from '$app/paths';
 	import RatingCells from '$lib/components/RatingCells.svelte';
 	import HelpTip from '$lib/components/HelpTip.svelte';
+	import { formatDrinkNumber, formatDrinkVolume } from '$lib/utils/drink-facts';
+	import { capitalizeAuthorName } from '$lib/utils/authors';
 	import { SODA_RATING_METRICS } from '$lib/review-metadata';
 	import type { PageProps } from './$types';
 
@@ -16,7 +18,7 @@
 	const formatDecimal = (value: number | null): string =>
 		value === null ? '–' : decimalFormatter.format(value);
 	const formatWholeNumber = (value: number): string => wholeNumberFormatter.format(value);
-	const cards = $derived([
+	const overview = $derived([
 		{
 			label: 'Recenserade produkter',
 			value: formatWholeNumber(data.statistics.productCount),
@@ -70,16 +72,22 @@
 	]);
 	const rankings = $derived([
 		{
-			title: 'Högst läskbetyg',
-			products: data.statistics.topRatedProducts,
-			unit: '/ 5',
-			empty: 'Inga läskbetyg än.'
-		},
-		{
 			title: 'Lägst literpris',
 			products: data.statistics.bestValueProducts,
 			unit: 'kr/l',
 			empty: 'Inga recensioner med både pris och volym än.'
+		},
+		{
+			title: 'Högst literpris',
+			products: data.statistics.mostExpensiveProducts,
+			unit: 'kr/l',
+			empty: 'Inga recensioner med både pris och volym än.'
+		},
+		{
+			title: 'Högst läskbetyg',
+			products: data.statistics.topRatedProducts,
+			unit: '/ 5',
+			empty: 'Inga läskbetyg än.'
 		}
 	]);
 </script>
@@ -88,7 +96,7 @@
 	<title>Statistik</title>
 	<meta
 		name="description"
-		content="Smak, kolsyra, läskfavoriter och literpriser från våra läskrecensioner"
+		content="Betyg, literpriser och innehållstoppar för koffein, protein och kolhydrater från våra läskrecensioner"
 	/>
 </svelte:head>
 
@@ -98,7 +106,7 @@
 			Läsk i siffror.
 		</h1>
 		<p class="mt-4 max-w-2xl text-base leading-relaxed text-secondary">
-			Favoriter, betyg och priser från våra recensioner.
+			Favoriter, prisfynd och innehållstoppar. Allt bygger på våra publicerade recensioner.
 		</p>
 	</div>
 
@@ -118,48 +126,125 @@
 			</a>
 		</div>
 	{:else}
-		<div class="glass-panel mt-8 grid grid-cols-1 gap-x-8 p-6 sm:grid-cols-2 sm:p-8">
-			{#each cards as card}
-				<div class="border-b border-line py-5">
-					<div class="flex items-center gap-1">
-						<p class="text-sm font-semibold text-secondary">{card.label}</p>
-						<HelpTip label={card.label} text={card.note} />
-					</div>
-					<p class="mt-2 text-2xl font-semibold tabular-nums text-ink">{card.value}</p>
+		<div class="mt-8 grid items-start gap-6 lg:grid-cols-2">
+			<section class="glass-panel p-6 sm:p-8" aria-labelledby="overview-heading">
+				<h2 id="overview-heading" class="text-2xl font-semibold text-ink">Överblick</h2>
+				<dl class="mt-4 divide-y divide-line">
+					{#each overview as item (item.label)}
+						<div class="flex items-baseline justify-between gap-4 py-4">
+							<dt class="min-w-0">
+								<span class="font-semibold text-secondary">{item.label}</span>
+								<span class="mt-1 block text-sm leading-relaxed text-muted">{item.note}</span>
+							</dt>
+							<dd class="shrink-0 text-xl font-semibold tabular-nums text-ink sm:text-2xl">
+								{item.value}
+							</dd>
+						</div>
+					{/each}
+				</dl>
+			</section>
+
+			<section class="glass-panel p-6 sm:p-8" aria-labelledby="records-heading">
+				<h2 id="records-heading" class="text-2xl font-semibold text-ink">Betyg och priser</h2>
+				<p class="mt-3 text-sm leading-relaxed text-secondary">
+					Literpriset gör olika förpackningsstorlekar jämförbara. Priserna gäller vid
+					recensionstillfället.
+				</p>
+				<div class="mt-6 space-y-6">
+					{#each rankings as ranking, index (ranking.title)}
+						<section aria-labelledby={`ranking-${index}`} class="border-t border-line pt-5">
+							<h3 id={`ranking-${index}`} class="text-lg font-semibold text-ink">
+								{ranking.title}
+							</h3>
+							{#if ranking.products.length}
+								<p class="mt-2 text-2xl font-semibold tabular-nums text-accent">
+									{formatDecimal(ranking.products[0].value)}
+									{ranking.unit}
+								</p>
+								<ul class="mt-3 space-y-2">
+									{#each ranking.products as product (product.slug)}
+										<li>
+											<a
+												href={resolve('/[slug]', { slug: product.slug }) + '/'}
+												class="font-medium text-secondary underline decoration-line underline-offset-4 hover:text-accent hover:decoration-accent"
+												>{product.title}</a
+											>
+										</li>
+									{/each}
+								</ul>
+							{:else}<p class="mt-3 text-sm text-muted">{ranking.empty}</p>{/if}
+						</section>
+					{/each}
 				</div>
-			{/each}
+			</section>
 		</div>
 
-		<div class="mx-auto mt-5 grid w-full max-w-6xl grid-cols-1 gap-5 lg:grid-cols-2">
-			{#each rankings as ranking}
-				<section class="glass-panel p-6">
-					<h2 class="text-xl font-semibold text-ink">{ranking.title}</h2>
-					{#if ranking.products.length}
-						<p class="mt-3 text-4xl font-bold text-accent">
-							{formatDecimal(ranking.products[0].value)}
-							<span class="text-2xl">{ranking.unit}</span>
-						</p>
-						<ul class="mt-5 space-y-2">
-							{#each ranking.products as product (product.slug)}
-								<li>
-									<a
-										href={resolve('/[slug]', { slug: product.slug }) + '/'}
-										class="text-sm font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4 hover:text-accent"
-										>{product.title}</a
-									>
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="mt-3 text-sm text-secondary">{ranking.empty}</p>
-					{/if}
-				</section>
-			{/each}
-		</div>
+		<section class="glass-panel mt-6 p-6 sm:p-8" aria-labelledby="nutrients-heading">
+			<h2 id="nutrients-heading" class="text-2xl font-semibold text-ink">Innehållstoppen</h2>
+			<p class="mt-3 max-w-prose leading-relaxed text-secondary">
+				Vilken läsk har mest koffein, protein eller kolhydrater? Per 100 ml jämför koncentrationen;
+				per förpackning visar mängden i hela den angivna volymen.
+			</p>
+			<p class="mt-2 max-w-prose text-sm leading-relaxed text-muted">
+				Högst innehåll är inget kvalitetsbetyg. Kolhydrater är inte samma sak som socker. Bara
+				angivna uppgifter ingår; en saknad mängd räknas inte som noll.
+			</p>
+			<div class="mt-8 grid gap-8 lg:grid-cols-3">
+				{#each data.statistics.nutrients as nutrient (nutrient.key)}
+					<section
+						aria-labelledby={`nutrient-${nutrient.key}`}
+						class="min-w-0 border-t border-line pt-5"
+					>
+						<h3 id={`nutrient-${nutrient.key}`} class="text-xl font-semibold text-ink">
+							Mest {nutrient.label.toLowerCase()}
+						</h3>
+						{#each [{ basis: '100ml', label: 'Per 100 ml', products: nutrient.highestPer100Ml, count: nutrient.per100MlCount, unit: `${nutrient.unit}/100 ml` }, { basis: 'container', label: 'Per förpackning', products: nutrient.highestPerContainer, count: nutrient.perContainerCount, unit: nutrient.unit }] as ranking (ranking.basis)}
+							<section aria-labelledby={`nutrient-${nutrient.key}-${ranking.basis}`} class="mt-6">
+								<h4
+									id={`nutrient-${nutrient.key}-${ranking.basis}`}
+									class="text-sm font-semibold text-secondary"
+								>
+									{ranking.label}
+								</h4>
+								{#if ranking.products.length}
+									<p class="mt-2 text-2xl font-semibold tabular-nums text-accent">
+										{formatDrinkNumber(ranking.products[0].value)}
+										{ranking.unit}
+									</p>
+									<ul class="mt-3 space-y-3">
+										{#each ranking.products as product (product.slug)}
+											<li>
+												<a
+													href={resolve('/[slug]', { slug: product.slug }) + '/'}
+													class="font-medium text-secondary underline decoration-line underline-offset-4 hover:text-accent hover:decoration-accent"
+													>{product.title}</a
+												>
+												<p class="mt-1 text-sm text-muted">
+													Av {capitalizeAuthorName(
+														product.author
+													)}{#if ranking.basis === 'container'}
+														· {product.volumeMl === undefined
+															? 'Volym ej angiven'
+															: formatDrinkVolume(product.volumeMl)}{/if}
+												</p>
+											</li>
+										{/each}
+									</ul>
+									<p class="mt-3 text-sm text-muted">
+										Baserat på {ranking.count}
+										{ranking.count === 1 ? 'recension' : 'recensioner'} med jämförbar mängd.
+									</p>
+								{:else}<p class="mt-2 text-sm text-muted">Inga jämförbara uppgifter än.</p>{/if}
+							</section>
+						{/each}
+					</section>
+				{/each}
+			</div>
+		</section>
 
 		{#if data.statistics.sodaReviewCount > 0}
-			<section class="mx-auto mt-5 w-full max-w-6xl glass-panel p-6">
-				<h2 class="text-xl font-semibold text-ink">Läskens betygsprofil</h2>
+			<section class="glass-panel mt-6 p-6 sm:p-8">
+				<h2 class="text-2xl font-semibold text-ink">Läskens betygsprofil</h2>
 				<p class="mt-2 text-sm leading-relaxed text-secondary">
 					Snitt på skalan 0–5. Sötma och konsistens beskriver egenskaper, inte kvalitet.
 				</p>

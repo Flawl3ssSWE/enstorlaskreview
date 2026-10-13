@@ -114,4 +114,104 @@ describe('public derived content', () => {
 			isHappyHourPrice: true
 		});
 	});
+	it('compares nutrient concentration separately from whole-package contents', () => {
+		const statistics = buildReviewStatistics([
+			{
+				...soda,
+				slug: 'liten',
+				volumeMl: 250,
+				caffeineMgPer100Ml: 40,
+				proteinGPerContainer: 15,
+				carbohydrateGPer100Ml: 12
+			},
+			{
+				...soda,
+				slug: 'stor',
+				volumeMl: 1000,
+				caffeineMgPer100Ml: undefined,
+				caffeineMgPerContainer: 200,
+				proteinGPerContainer: 30,
+				carbohydrateGPer100Ml: undefined,
+				carbohydrateGPerContainer: 80
+			}
+		]);
+		const caffeine = statistics.nutrients.find(({ key }) => key === 'caffeine')!;
+		expect(caffeine.highestPer100Ml).toMatchObject([{ slug: 'liten', value: 40 }]);
+		expect(caffeine.highestPerContainer).toMatchObject([
+			{ slug: 'stor', value: 200, volumeMl: 1000 }
+		]);
+		const protein = statistics.nutrients.find(({ key }) => key === 'protein')!;
+		expect(protein.highestPer100Ml).toMatchObject([{ slug: 'liten', value: 6 }]);
+		expect(protein.highestPerContainer).toMatchObject([{ slug: 'stor', value: 30 }]);
+		const carbohydrate = statistics.nutrients.find(({ key }) => key === 'carbohydrate')!;
+		expect(carbohydrate.highestPer100Ml).toMatchObject([{ slug: 'liten', value: 12 }]);
+		expect(carbohydrate.highestPerContainer).toMatchObject([{ slug: 'stor', value: 80 }]);
+		for (const nutrient of statistics.nutrients) {
+			expect(nutrient.per100MlCount).toBe(2);
+			expect(nutrient.perContainerCount).toBe(2);
+		}
+	});
+	it('keeps unknown nutrient amounts and unknown volumes out of the corresponding comparisons', () => {
+		const statistics = buildReviewStatistics([
+			{ ...review, slug: 'endast-total', caffeineMgPerContainer: 150 },
+			{ ...review, slug: 'endast-koncentration', proteinGPer100Ml: 2 },
+			{ ...review, slug: 'noll', carbohydrateGPer100Ml: 0, volumeMl: 330 },
+			review
+		]);
+		expect(statistics.nutrients).toMatchObject([
+			{
+				key: 'caffeine',
+				per100MlCount: 0,
+				perContainerCount: 1,
+				highestPer100Ml: [],
+				highestPerContainer: [{ slug: 'endast-total', value: 150 }]
+			},
+			{
+				key: 'protein',
+				per100MlCount: 1,
+				perContainerCount: 0,
+				highestPer100Ml: [{ slug: 'endast-koncentration', value: 2 }],
+				highestPerContainer: []
+			},
+			{
+				key: 'carbohydrate',
+				per100MlCount: 1,
+				perContainerCount: 1,
+				highestPer100Ml: [{ slug: 'noll', value: 0 }],
+				highestPerContainer: [{ slug: 'noll', value: 0 }]
+			}
+		]);
+	});
+	it('preserves nutrient ties across entered bases without rounding comparisons or mutating reviews', () => {
+		const reviews = [
+			{ ...review, title: 'B', slug: 'b', caffeineMgPerContainer: 160, volumeMl: 500 },
+			{ ...review, title: 'A', slug: 'a', caffeineMgPer100Ml: 32, volumeMl: 500 },
+			{ ...review, title: 'C', slug: 'c', caffeineMgPer100Ml: 31.999, volumeMl: 500 }
+		];
+		const before = structuredClone(reviews);
+		const caffeine = buildReviewStatistics(reviews).nutrients[0];
+		expect(caffeine.highestPer100Ml.map(({ slug }) => slug)).toEqual(['a', 'b']);
+		expect(caffeine.highestPerContainer.map(({ slug }) => slug)).toEqual(['a', 'b']);
+		expect(caffeine.highestPerContainer[0].value).toBe(160);
+		expect(reviews).toEqual(before);
+		expect(
+			buildReviewStatistics([]).nutrients.every(
+				(nutrient) =>
+					nutrient.highestPer100Ml.length === 0 &&
+					nutrient.highestPerContainer.length === 0 &&
+					nutrient.per100MlCount === 0 &&
+					nutrient.perContainerCount === 0
+			)
+		).toBe(true);
+	});
+	it('shows both extremes of liter prices and ignores reviews without a usable volume', () => {
+		const statistics = buildReviewStatistics([
+			{ ...soda, slug: 'billig', beerPriceKr: 10, volumeMl: 1000 },
+			{ ...soda, slug: 'dyr', beerPriceKr: 25, volumeMl: 250 },
+			{ ...soda, slug: 'utan-volym', beerPriceKr: 999, volumeMl: undefined }
+		]);
+		expect(statistics.bestValueProducts).toMatchObject([{ slug: 'billig', value: 10 }]);
+		expect(statistics.mostExpensiveProducts).toMatchObject([{ slug: 'dyr', value: 100 }]);
+		expect(buildReviewStatistics([]).mostExpensiveProducts).toEqual([]);
+	});
 });

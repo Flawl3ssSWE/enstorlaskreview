@@ -38,6 +38,17 @@ updating when the visitor changes sorting or leaves the page. No geocoding servi
 Server-side accounts, review deletion, Discord requests, analytics, and automatic visitor location
 requests are not part of this static adaptation.
 
+## Statistics
+
+`/statistik/` follows the upstream overview-and-records layout, adapted for soda. It shows an overview,
+lowest and highest liter prices, the highest soda score, and caffeine/protein/carbohydrate records.
+Nutrient records compare concentrations per 100 ml separately from totals per package; totals show
+the recorded package volume when available. The existing nutrient conversion derives the other
+basis only when the review has an explicit volume. Unknown amounts stay unknown; an explicit zero
+is included. Ties retain links to every matching review, with author credits, and comparisons use
+unrounded values. Display figures use Swedish formatting. These records describe recorded content,
+not quality, and carbohydrate amounts are not presented as sugar. The page works without JavaScript.
+
 ## Add or edit a review
 
 The permanent `/demo/` page shows a clearly labelled fictional soda with all current soda and venue details. It shares the real review layout, but its data and example image live under `src/lib`, separate from published reviews. It is not linked in navigation and never enters the home page, search, reviewer filters, statistics, map, related reviews, or RSS feed.

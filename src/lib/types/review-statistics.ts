@@ -6,6 +6,21 @@ export interface ReviewStatisticProduct {
 	value: number;
 }
 
+export interface NutrientStatisticProduct extends ReviewStatisticProduct {
+	author: string;
+	volumeMl?: number;
+}
+
+export interface NutrientStatistic {
+	key: 'caffeine' | 'protein' | 'carbohydrate';
+	label: string;
+	unit: 'mg' | 'g';
+	per100MlCount: number;
+	perContainerCount: number;
+	highestPer100Ml: NutrientStatisticProduct[];
+	highestPerContainer: NutrientStatisticProduct[];
+}
+
 export interface PublicReviewStatistics {
 	totalReviews: number;
 	productCount: number;
@@ -24,4 +39,6 @@ export interface PublicReviewStatistics {
 	ratingAverages: Array<{ key: keyof SodaRatingValues; average: number | null; count: number }>;
 	topRatedProducts: ReviewStatisticProduct[];
 	bestValueProducts: ReviewStatisticProduct[];
+	mostExpensiveProducts: ReviewStatisticProduct[];
+	nutrients: NutrientStatistic[];
 }
