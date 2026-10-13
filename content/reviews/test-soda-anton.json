@@ -1,0 +1,32 @@
+{
+	"title": "TEST SODA",
+	"sodaId": "test-soda",
+	"slug": "test-soda-anton",
+	"image": "test-soda-anton.webp",
+	"location": "",
+	"createdAt": "2026-10-13T20:15:29.763Z",
+	"updatedAt": "2026-10-13T20:15:29.763Z",
+	"author": "Anton",
+	"description": "TEST TEST TEST",
+	"favorite": false,
+	"repurchasePotential": 1,
+	"sodaRatings": {
+		"taste": 3,
+		"sweetness": 3,
+		"carbonation": 3,
+		"mouthfeel": 3,
+		"mouthfeelMatch": 3,
+		"drinkability": 3,
+		"matchesName": 3,
+		"value": 3
+	},
+	"container": "SodaStream smak",
+	"volumeMl": 330,
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"beerBrand": "TEST",
+	"beerPriceKr": 20,
+	"imageFocusX": 50,
+	"imageFocusY": 50,
+	"imageZoom": 1
+}
