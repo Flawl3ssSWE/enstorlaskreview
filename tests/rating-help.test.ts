@@ -22,10 +22,8 @@ test('rating help opens on hover and keyboard focus and dismisses with Escape', 
 test('help fits the mobile viewport and dismisses when tapping outside', async ({ page }) => {
 	await page.setViewportSize({ width: 375, height: 812 });
 	await page.goto('statistik/');
-	await page.getByRole('button', { name: 'Om snittpris per förpackning' }).click();
-	const tooltip = page
-		.getByRole('tooltip')
-		.filter({ hasText: 'Förpackningarnas storlek varierar.' });
+	await page.getByRole('button', { name: 'Om sötma', exact: true }).click();
+	const tooltip = page.getByRole('tooltip').filter({ hasText: 'Hur söt är läsken?' });
 	await expect(tooltip).toBeVisible();
 	const bounds = (await tooltip.boundingBox())!;
 	expect(bounds.x).toBeGreaterThanOrEqual(0);
