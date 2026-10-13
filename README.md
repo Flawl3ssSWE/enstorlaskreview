@@ -1,6 +1,6 @@
 # En Stor Läsk Review
 
-A Swedish soda review guide built with SvelteKit, TypeScript, Tailwind CSS, and MapLibre. GitHub Pages serves prerendered pages; there is no application server, database, login, or server-side editor. A browser form generates review files locally.
+A Swedish soda review guide built with SvelteKit, TypeScript, Tailwind CSS, and MapLibre. GitHub Pages serves prerendered pages; there is no application server, database, or server-side editor. A browser form prepares reviews locally and can submit them as GitHub pull requests using a personal access token. JSON and image downloads remain available without authentication.
 
 ## Development
 
@@ -28,7 +28,7 @@ The design follows the photo-led cards and simpler navigation of En Stor Stark R
 The latest upstream refinements use shared form and button styles, calmer FAQ and statistics layouts,
 and five-cell rating displays, while retaining the soda palette, dark default, local fonts, and RSS links.
 The optional **`/skapa/wizard/`** editor guides you through five steps and uses the same browser-only
-import, validation, image processing, and JSON/image downloads as `/skapa/`. Its price ruler adapts
+import, validation, image processing, GitHub PR submission, and JSON/image downloads as `/skapa/`. Its price ruler adapts
 [the upstream implementation](https://github.com/jonathan-lindqvist/enstorstarkreview/tree/bad4ed2/src/lib/components/review-wizard)
 with momentum, keyboard controls, reduced-motion support, and best-effort local tick audio/haptics.
 Soda prices retain 10 öre precision and can still be typed or left blank. Nothing is saved between visits.
@@ -55,7 +55,40 @@ The permanent `/demo/` page shows a clearly labelled fictional soda with all cur
 
 The RSS 2.0 feed is available at **https://enstorlaskreview.se/rss.xml**, with autodiscovery and an **RSS-flöde** footer link. Every build automatically updates the static feed from all validated reviews, including legacy reviews, with full formatted review text and author credits. Entries are ordered by creation date (newest first, then slug); editing a review keeps its URL-based GUID and publication date. The feed's build date follows the latest review update. Repository-path builds retain their configured `BASE_PATH` in feed and review URLs.
 
-Open `/skapa/` directly (the generator is not linked in the public navigation) to generate one soda review locally. Fill in the soda name, author, free text, image, eight scores (0–5, whole points only), favorite status, and optionally repurchase potential (0–5, whole points) and the price you paid. The form previews the total rating (0–3) and weighted score (0–5) as you edit; it uses the same calculation as the published review. Empty, fractional, or out-of-range scores hide the preview, and venue scores do not affect it. Each reviewer publishes their own JSON file, slug, image, text, scores, price, container, volume, and dates, even when reviewing the same soda. New slugs are suggested from the soda name and author; change the slug if needed to distinguish multiple reviews by the same author. Download both files, then place the JSON in `content/reviews/` and the WebP in `content/reviews/images/`. The form accepts JPEG, PNG, WebP, HEIC and HEIF images up to 10 MiB; HEIC/HEIF decoding stays entirely in the browser and its fallback decoder loads only when needed. The form removes original image metadata (including EXIF/GPS), resizes images to at most 1,600 pixels, and compresses them to WebP at quality 82%, reducing quality and dimensions further if needed to stay within 500 KiB. The resulting size is shown before download. Adjust zoom (100–300%) and horizontal/vertical image position in the 16:9 preview to choose the crop shown on review pages and cards. Positioning also works when editing an existing image; the focus percentages and optional `imageZoom` multiplier (1–3, default 1) are saved in JSON. Zoom only changes the displayed crop; the downloaded image remains full-sized. Nothing is uploaded or saved between visits.
+### Submit a review through GitHub
+
+Open `/skapa/` or `/skapa/wizard/` directly; neither editor is linked in public navigation.
+**Skicka som PR** is the primary publishing action for new reviews and edits. Prepare the review,
+connect to GitHub, and submit. The browser creates a unique review branch containing one commit
+with the JSON, any new image, and removal of a replaced image only if no other review uses it.
+Open the resulting PR, review the changes, wait for checks, and merge it. The existing deployment
+then publishes the site; submitting a PR alone does not publish the review.
+
+For the repository owner's account, create a GitHub **fine-grained personal access token** with
+access only to `Flawl3ssSWE/enstorlaskreview`, an expiration date, and repository permissions
+**Contents: Read and write** and **Pull requests: Read and write**. Enter it in **GitHub-token**
+and select **Anslut till GitHub**. The editor shows the authenticated account; the review's author
+remains separately editable. Each reviewer should use their own credentials. GitHub account access,
+organization policies, and fine-grained token collaborator limitations still apply; repository
+selection alone does not grant access. See [GitHub's token documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+
+Tokens stay only in the current editor's memory and are cleared on **Koppla från**, navigation,
+or reload. They are never included in review files or stored in browser storage. Token permissions
+cover repository content, not only the review folders. Required PRs and checks must be enforced by
+repository protections; the editor does not configure those settings. No auto-merge is enabled.
+
+Before writing, the editor checks current GitHub content for filename collisions and changed/deleted
+edit baselines. For a stale edit, download your changes for safekeeping, then select **Ladda aktuell recension från GitHub**. This replaces the form and its edit baseline with current `main` content, even before the site deployment finishes.
+Imported edits require the matching published review baseline; imported additions need a newly
+processed image or a valid existing repository image. If submission fails after creating a branch,
+retry without changing the form to reuse the same commit and branch, or follow the comparison link
+to create the PR on GitHub. Submission progress exists only in the current page session.
+
+**Ladda ner JSON** and **Ladda ner bild** remain available without a token for the manual workflow below.
+
+### Generate or edit files locally
+
+Open `/skapa/` directly (the generator is not linked in the public navigation) to generate one soda review locally. Fill in the soda name, author, free text, image, eight scores (0–5, whole points only), favorite status, and optionally repurchase potential (0–5, whole points) and the price you paid. The form previews the total rating (0–3) and weighted score (0–5) as you edit; it uses the same calculation as the published review. Empty, fractional, or out-of-range scores hide the preview, and venue scores do not affect it. Each reviewer publishes their own JSON file, slug, image, text, scores, price, container, volume, and dates, even when reviewing the same soda. New slugs are suggested from the soda name and author; change the slug if needed to distinguish multiple reviews by the same author. To publish manually, download both files, then place the JSON in `content/reviews/` and the WebP in `content/reviews/images/`. The form accepts JPEG, PNG, WebP, HEIC and HEIF images up to 10 MiB; HEIC/HEIF decoding stays entirely in the browser and its fallback decoder loads only when needed. The form removes original image metadata (including EXIF/GPS), resizes images to at most 1,600 pixels, and compresses them to WebP at quality 82%, reducing quality and dimensions further if needed to stay within 500 KiB. The resulting size is shown before download. Adjust zoom (100–300%) and horizontal/vertical image position in the 16:9 preview to choose the crop shown on review pages and cards. Positioning also works when editing an existing image; the focus percentages and optional `imageZoom` multiplier (1–3, default 1) are saved in JSON. Zoom only changes the displayed crop; the downloaded image remains full-sized. Nothing is uploaded until you explicitly submit a PR, and form state is not saved between visits.
 
 See [the soda JSON example](docs/soda-review-example.json); replace all example content before publishing. All fields belong directly to the review object. Nested `reviews` arrays are rejected; there are no shared product prices or combined reviewer ratings. To edit a review, use **Ladda in recension från JSON** beneath the generator heading to load its saved `<slug>.json`, or select a published review with **Redigera en befintlig recension**. The JSON import runs the shared validator and accepts soda reviews up to 256 KiB. Invalid files leave the current form intact. Edit the populated form and replace the review’s JSON file with the downloaded version. **Skapa ny recension** clears the loaded review. If an imported image is not on the site, select its image file to preview it; the existing filename can still be retained when exporting JSON. Its slug and creation date are retained, along with its image when no replacement is selected. Replacement images get a new WebP filename; remove the old image if no review references it. A new image download is only necessary when replacing the image.
 

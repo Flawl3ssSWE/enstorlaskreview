@@ -34,7 +34,7 @@ const config = {
 				'img-src': ['self', 'data:', 'blob:', 'https://tiles.openfreemap.org'],
 				'style-src': ['self', 'unsafe-inline'],
 				'script-src': ['self'],
-				'connect-src': ['self', 'https://tiles.openfreemap.org'],
+				'connect-src': ['self', 'https://tiles.openfreemap.org', 'https://api.github.com'],
 				'font-src': ['self'],
 				'worker-src': ['self', 'blob:'],
 				'child-src': ['self', 'blob:'],

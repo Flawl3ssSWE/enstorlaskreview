@@ -75,7 +75,7 @@ test('wizard validates steps, retains values, imports and exports decimal soda p
 
 test('wizard final validation returns to a missing required field', async ({ page }) => {
 	await page.goto('skapa/wizard/');
-	await page.getByRole('button', { name: '5. Ladda ner', exact: true }).click();
+	await page.getByRole('button', { name: '5. Skicka recension', exact: true }).click();
 	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
 	await expect(page.getByLabel('Läskens namn / rubrik')).toBeVisible();
 	await expect(page.getByLabel('Läskens namn / rubrik')).toBeFocused();
