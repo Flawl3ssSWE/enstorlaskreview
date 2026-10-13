@@ -28,6 +28,7 @@
 	import { ratingFromAverage } from '$lib/utils/ratings';
 	import { generateSlug, generateSodaId } from '$lib/utils/slug';
 	import { decodeReviewImage } from '$lib/utils/image-upload';
+	import { encodeReviewWebp } from '$lib/utils/image-encode';
 	import type {
 		DrinkContainer,
 		SodaRatingValues,
@@ -243,11 +244,7 @@
 					canvas.height = Math.max(1, Math.round(bitmap.height * scale));
 					context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 					for (const quality of [0.82, 0.7, 0.6]) {
-						blob = await new Promise<Blob | null>((resolve) =>
-							canvas.toBlob(resolve, 'image/webp', quality)
-						);
-						if (!blob || blob.type !== 'image/webp')
-							throw new Error('Webbläsaren kunde inte skapa WebP. Prova en annan webbläsare.');
+						blob = await encodeReviewWebp(canvas, quality);
 						if (current !== selection) return;
 						if (blob.size <= 500 * 1024) break;
 					}

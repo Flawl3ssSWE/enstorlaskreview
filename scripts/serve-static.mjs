@@ -19,6 +19,7 @@ const types = {
 	'.jpg': 'image/jpeg',
 	'.jpeg': 'image/jpeg',
 	'.webp': 'image/webp',
+	'.wasm': 'application/wasm',
 	'.svg': 'image/svg+xml',
 	'.woff': 'font/woff',
 	'.woff2': 'font/woff2',

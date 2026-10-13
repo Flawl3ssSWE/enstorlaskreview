@@ -11,6 +11,15 @@ import {
 
 const basePath = process.env.BASE_PATH ?? '';
 
+async function forceWebpFallback(page: import('@playwright/test').Page) {
+	await page.addInitScript(() => {
+		const native = HTMLCanvasElement.prototype.toBlob;
+		HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+			return native.call(this, callback, type === 'image/webp' ? 'image/png' : type, quality);
+		};
+	});
+}
+
 async function fillReview(page: import('@playwright/test').Page) {
 	await page.goto('skapa/');
 	await page.getByLabel('Läskens namn / rubrik').fill('Ny hallonsoda');
@@ -96,65 +105,81 @@ test('generator downloads one flat review with one price and a separate compress
 	expect(bytes.length).toBeLessThanOrEqual(500 * 1024);
 });
 
-test('large images are resized and compressed without source EXIF metadata', async ({ page }) => {
-	await fillReview(page);
-	const source = await page.evaluate(async () => {
-		const canvas = document.createElement('canvas');
-		canvas.width = 2400;
-		canvas.height = 1800;
-		const context = canvas.getContext('2d')!;
-		const pixels = context.createImageData(canvas.width, canvas.height);
-		let seed = 42;
-		for (let i = 0; i < pixels.data.length; i++) {
-			seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-			pixels.data[i] = i % 4 === 3 ? 255 : seed >>> 24;
+for (const fallback of [false, true]) {
+	test(`large images are resized and stripped of EXIF with ${fallback ? 'fallback' : 'native'} WebP encoding`, async ({
+		page
+	}) => {
+		if (fallback) await forceWebpFallback(page);
+		const errors: string[] = [];
+		page.on('pageerror', (error) => errors.push(error.message));
+		await page.addInitScript(() => {
+			document.addEventListener('securitypolicyviolation', (event) => {
+				throw new Error(`CSP violation: ${event.violatedDirective}`);
+			});
+		});
+		await fillReview(page);
+		const source = await page.evaluate(async () => {
+			const canvas = document.createElement('canvas');
+			canvas.width = 2400;
+			canvas.height = 1800;
+			const context = canvas.getContext('2d')!;
+			const pixels = context.createImageData(canvas.width, canvas.height);
+			let seed = 42;
+			for (let i = 0; i < pixels.data.length; i++) {
+				seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+				pixels.data[i] = i % 4 === 3 ? 255 : seed >>> 24;
+			}
+			context.putImageData(pixels, 0, 0);
+			return canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+		});
+		const jpeg = Buffer.from(source, 'base64');
+		// A valid EXIF header with an empty TIFF IFD and a private metadata sentinel.
+		const exif = Buffer.concat([
+			Buffer.from('Exif\0\0'),
+			Buffer.from([73, 73, 42, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+			Buffer.from('private-location-sentinel')
+		]);
+		const marker = Buffer.from([255, 225, 0, 0]);
+		marker.writeUInt16BE(exif.length + 2, 2);
+		const input = Buffer.concat([jpeg.subarray(0, 2), marker, exif, jpeg.subarray(2)]);
+		await page.getByLabel('Bild till recensionen').setInputFiles({
+			name: 'large-with-exif.jpg',
+			mimeType: 'image/jpeg',
+			buffer: input
+		});
+		await expect(page.getByText(/Komprimerad bild:/)).toBeVisible();
+		const downloadPromise = page.waitForEvent('download');
+		await page.getByRole('button', { name: 'Ladda ner bild' }).click();
+		const bytes = await readFile((await (await downloadPromise).path())!);
+		expect(bytes.subarray(0, 4).toString()).toBe('RIFF');
+		expect(bytes.subarray(8, 12).toString()).toBe('WEBP');
+		expect(bytes.length).toBeLessThanOrEqual(500 * 1024);
+		expect(bytes.length).toBeLessThan(input.length);
+		expect(bytes.includes(Buffer.from('private-location-sentinel'))).toBe(false);
+		const chunks: string[] = [];
+		for (let offset = 12; offset + 8 <= bytes.length; ) {
+			chunks.push(bytes.subarray(offset, offset + 4).toString());
+			const length = bytes.readUInt32LE(offset + 4);
+			offset += 8 + length + (length % 2);
 		}
-		context.putImageData(pixels, 0, 0);
-		return canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+		expect(chunks).not.toContain('EXIF');
+		expect(chunks).not.toContain('XMP ');
+		const dimensions = await page.evaluate(async () => {
+			const image = document.querySelector<HTMLImageElement>(
+				'img[alt="Förhandsvisning av recensionsbild"]'
+			)!;
+			await image.decode();
+			return [image.naturalWidth, image.naturalHeight];
+		});
+		expect(Math.max(...dimensions)).toBeLessThanOrEqual(1600);
+		expect(dimensions[0] / dimensions[1]).toBeCloseTo(4 / 3, 2);
+		expect(errors).toEqual([]);
 	});
-	const jpeg = Buffer.from(source, 'base64');
-	// A valid EXIF header with an empty TIFF IFD and a private metadata sentinel.
-	const exif = Buffer.concat([
-		Buffer.from('Exif\0\0'),
-		Buffer.from([73, 73, 42, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-		Buffer.from('private-location-sentinel')
-	]);
-	const marker = Buffer.from([255, 225, 0, 0]);
-	marker.writeUInt16BE(exif.length + 2, 2);
-	const input = Buffer.concat([jpeg.subarray(0, 2), marker, exif, jpeg.subarray(2)]);
-	await page.getByLabel('Bild till recensionen').setInputFiles({
-		name: 'large-with-exif.jpg',
-		mimeType: 'image/jpeg',
-		buffer: input
-	});
-	await expect(page.getByText(/Komprimerad bild:/)).toBeVisible();
-	const downloadPromise = page.waitForEvent('download');
-	await page.getByRole('button', { name: 'Ladda ner bild' }).click();
-	const bytes = await readFile((await (await downloadPromise).path())!);
-	expect(bytes.length).toBeLessThanOrEqual(500 * 1024);
-	expect(bytes.length).toBeLessThan(input.length);
-	expect(bytes.includes(Buffer.from('private-location-sentinel'))).toBe(false);
-	const chunks: string[] = [];
-	for (let offset = 12; offset + 8 <= bytes.length; ) {
-		chunks.push(bytes.subarray(offset, offset + 4).toString());
-		const length = bytes.readUInt32LE(offset + 4);
-		offset += 8 + length + (length % 2);
-	}
-	expect(chunks).not.toContain('EXIF');
-	expect(chunks).not.toContain('XMP ');
-	const dimensions = await page.evaluate(async () => {
-		const image = document.querySelector<HTMLImageElement>(
-			'img[alt="Förhandsvisning av recensionsbild"]'
-		)!;
-		await image.decode();
-		return [image.naturalWidth, image.naturalHeight];
-	});
-	expect(Math.max(...dimensions)).toBeLessThanOrEqual(1600);
-	expect(dimensions[0] / dimensions[1]).toBeCloseTo(4 / 3, 2);
-});
+}
 
-for (const name of ['photo.HEIC', 'photo.heif']) {
+for (const name of ['photo.HEIC', 'photo.heif', 'fallback.HEIC']) {
 	test(`${name} converts locally to an upright WebP under the static CSP`, async ({ page }) => {
+		if (name === 'fallback.HEIC') await forceWebpFallback(page);
 		await fillReview(page);
 		const errors: string[] = [];
 		page.on('pageerror', (error) => errors.push(error.message));

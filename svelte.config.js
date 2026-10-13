@@ -33,7 +33,8 @@ const config = {
 				'default-src': ['self'],
 				'img-src': ['self', 'data:', 'blob:', 'https://tiles.openfreemap.org'],
 				'style-src': ['self', 'unsafe-inline'],
-				'script-src': ['self'],
+				// Permit the local WebP WASM encoder; JavaScript eval remains disabled.
+				'script-src': ['self', 'wasm-unsafe-eval'],
 				'connect-src': ['self', 'https://tiles.openfreemap.org', 'https://api.github.com'],
 				'font-src': ['self'],
 				'worker-src': ['self', 'blob:'],
