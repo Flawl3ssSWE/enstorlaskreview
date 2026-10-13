@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { REPURCHASE_POTENTIAL_LABELS } from '$lib/review-metadata';
 </script>
 
@@ -7,14 +8,11 @@
 	<meta name="description" content="Vanliga frågor om hur En Stor Läsk Review fungerar" />
 </svelte:head>
 
-<div class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6">
-	<div
-		class="rounded-3xl border border-line bg-surface p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_30px_-26px_rgba(0,0,0,0.65)] backdrop-blur-xl sm:p-10"
-	>
-		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-muted">FAQ</p>
-		<h1 class="mt-4 text-3xl font-semibold text-ink sm:text-4xl">Vanliga frågor</h1>
+<div class="page-shell">
+	<div class="glass-panel p-6 sm:p-10">
+		<h1 class="text-balance text-3xl font-semibold text-ink sm:text-4xl">Vanliga frågor</h1>
 
-		<div class="mt-8 space-y-7">
+		<div class="mt-10 max-w-prose space-y-10">
 			<section>
 				<h2 class="text-2xl font-semibold text-ink">Vad är En Stor Läsk Review?</h2>
 				<p class="mt-2 text-secondary">
@@ -78,6 +76,27 @@
 			</section>
 
 			<section>
+				<h2 class="text-2xl font-semibold text-ink">Hur följer jag nya recensioner?</h2>
+				<p class="mt-2 text-secondary">
+					Lägg till vårt <a
+						href={`${base}/rss.xml`}
+						class="font-semibold underline underline-offset-4">RSS-flöde</a
+					>
+					i din RSS-läsare för att följa nya läskrecensioner. Du behöver inget konto. Ändringar i en
+					publicerad recension skapar ingen ny post.
+				</p>
+			</section>
+			<section>
+				<h2 class="text-2xl font-semibold text-ink">Hur fungerar sorteringen Närmast?</h2>
+				<p class="mt-2 text-secondary">
+					Välj Närmast på startsidan och tryck på Visa avstånd från min position. Om du tillåter
+					platsåtkomst räknas avstånd fågelvägen till recensioner med manuellt sparade koordinater.
+					Recensioner utan koordinater visas sist. Utan position visas de senaste recensionerna
+					först. Din position används bara i webbläsaren, sparas inte och skickas inte till oss.
+					Platsåtkomsten avslutas när du byter sortering eller lämnar startsidan.
+				</p>
+			</section>
+			<section>
 				<h2 class="text-2xl font-semibold text-ink">Hur fungerar kartan och integriteten?</h2>
 				<p class="mt-2 text-secondary">
 					Kartan visar platser där vi har provat läsk, när recensionen har en sparad kartposition.
@@ -85,7 +104,7 @@
 					från OpenFreeMap först när du godkänner att kartan laddas.
 				</p>
 				<p class="mt-2 text-secondary">
-					Vi ber inte om tillgång till din position. Kartan öppnas över Göteborg och du kan själv
+					Kartan ber inte om tillgång till din position. Den öppnas över Göteborg och du kan själv
 					flytta och zooma den. Ditt godkännande gäller bara medan kartsidan är öppen och sparas
 					inte i kakor eller lokal lagring.
 				</p>

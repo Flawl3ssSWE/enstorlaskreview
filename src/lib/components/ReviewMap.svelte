@@ -123,7 +123,7 @@
 	{/if}
 
 	{#if mapUnavailable}
-		<div class="pointer-events-none absolute inset-x-4 top-4 space-y-2">
+		<div class="pointer-events-none absolute left-4 right-16 top-4 space-y-2">
 			<div
 				class="rounded-2xl border border-amber-300/80 bg-amber-950/95 p-4 text-sm text-amber-100 shadow-sm"
 				role="status"

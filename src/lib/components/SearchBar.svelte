@@ -48,7 +48,8 @@
 			value={inputValue}
 			oninput={handleInput}
 			placeholder="Sök läsk, märke eller smak"
-			class="h-11 w-full rounded-2xl border border-line bg-surface-raised pl-11 pr-4 text-sm text-ink placeholder:text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none backdrop-blur-md focus:ring-2 focus:ring-accent/40"
+			aria-label="Sök läsk, märke eller smak"
+			class="field pl-11"
 		/>
 	</div>
 </form>

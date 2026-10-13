@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 	import defaultImage from '$lib/images/image.png';
 	import DrinkTypeIcons from '$lib/components/DrinkTypeIcons.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
@@ -10,6 +11,7 @@
 	import { drinkTypeLabels } from '$lib/utils/drink-facts';
 	interface Props {
 		drink?: DrinkFacts;
+		distanceKm?: number | null;
 		title: string;
 		description: string;
 		rating: number;
@@ -27,6 +29,7 @@
 
 	let {
 		drink,
+		distanceKm,
 		title,
 		description,
 		rating,
@@ -63,6 +66,9 @@
 			></div>
 		</div>
 		<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+		{#if distanceKm != null}<div class="absolute right-4 top-4">
+				<ReviewDistance {distanceKm} variant="photo" />
+			</div>{/if}
 		{#if favorite}
 			<p
 				class="absolute left-4 top-4 rounded-full border border-white/30 bg-black/60 px-3 py-1 text-xs font-semibold text-on-photo backdrop-blur-md"

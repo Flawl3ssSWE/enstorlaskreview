@@ -14,13 +14,10 @@
 <section class="page-shell">
 	<div class="mx-auto w-full max-w-6xl">
 		<div class="space-y-4">
-			<p class="text-xs font-semibold uppercase tracking-[0.34em] text-muted">
-				En stor läsk review
-			</p>
-			<h1 class="mt-4 text-3xl font-semibold leading-tight text-ink sm:text-5xl">
+			<h1 class="text-balance text-3xl font-semibold leading-tight text-ink sm:text-5xl">
 				Upptäck läsk på kartan.
 			</h1>
-			<div class="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
+			<div class="mt-4 text-base leading-relaxed text-secondary">
 				<p>Här har vi provat läsk. Tryck på en punkt för att läsa recensionen.</p>
 			</div>
 		</div>
@@ -30,15 +27,11 @@
 		</div>
 
 		{#if mapData.totalReviews === 0}
-			<p
-				class="mt-4 rounded-2xl border border-line bg-surface p-4 text-sm text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-			>
+			<p class="mt-4 rounded-2xl border border-line bg-surface p-4 text-sm text-secondary">
 				Det finns inga publicerade recensioner att visa ännu.
 			</p>
 		{:else if mapData.markers.length === 0}
-			<p
-				class="mt-4 rounded-2xl border border-line bg-surface p-4 text-sm text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-			>
+			<p class="mt-4 rounded-2xl border border-line bg-surface p-4 text-sm text-secondary">
 				Det finns ännu inga sparade kartpositioner för recensionerna.
 			</p>
 		{/if}

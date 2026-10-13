@@ -25,6 +25,19 @@ Playwright builds only clearly labelled test reviews in a temporary asset direct
 
 The design follows the photo-led cards and simpler navigation of En Stor Stark Review, adapted for soda reviews. Both themes retain the warm red palette: charcoal in dark mode, cream and blush in light mode. Dark is the default. The navbar toggle saves only `soda-theme` in local storage; `static/theme.js` applies that preference before first paint without cookies or inline scripts. If storage is unavailable, switching still works for the current visit. Cards show the title and rating on the photo, followed by a compact row for reviewer, category icons, and price above the review preview. Brand and nutrition figures stay off the cards. Detail pages pair a square photo with the title, overall rating, price, and reviewer on desktop, then stack them on mobile. Review text, drink facts, rating breakdowns, optional venue scores, and other reviewers remain separate sections. Category icons represent the explicitly recorded sugar status, energy drink, electrolyte drink, and protein drink classifications; detail-page icons sit beside the overall rating (wrapping below on narrow screens) and explain themselves on hover, focus, or tap. Missing caffeine values stay unknown and are omitted; zero is shown only when entered explicitly. Shared palette values and page/card utilities live in `src/app.css`.
 
+The latest upstream refinements use shared form and button styles, calmer FAQ and statistics layouts,
+and five-cell rating displays, while retaining the soda palette, dark default, local fonts, and RSS links.
+The optional **`/skapa/wizard/`** editor guides you through five steps and uses the same browser-only
+import, validation, image processing, and JSON/image downloads as `/skapa/`. Its price ruler adapts
+[the upstream implementation](https://github.com/jonathan-lindqvist/enstorstarkreview/tree/bad4ed2/src/lib/components/review-wizard)
+with momentum, keyboard controls, reduced-motion support, and best-effort local tick audio/haptics.
+Soda prices retain 10 öre precision and can still be typed or left blank. Nothing is saved between visits.
+The home page also offers **Närmast** sorting and distance badges after the visitor explicitly requests
+location access. Distances use only manually recorded review coordinates, remain in memory, and stop
+updating when the visitor changes sorting or leaves the page. No geocoding service is added.
+Server-side accounts, review deletion, Discord requests, analytics, and automatic visitor location
+requests are not part of this static adaptation.
+
 ## Add or edit a review
 
 The permanent `/demo/` page shows a clearly labelled fictional soda with all current soda and venue details. It shares the real review layout, but its data and example image live under `src/lib`, separate from published reviews. It is not linked in navigation and never enters the home page, search, reviewer filters, statistics, map, related reviews, or RSS feed.

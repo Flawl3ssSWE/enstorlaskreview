@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RatingCells from '$lib/components/RatingCells.svelte';
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
 	import RepurchasePotential from '$lib/components/RepurchasePotential.svelte';
 	import { favoriteLabel, sweetnessBalance } from '$lib/content/soda';
@@ -81,10 +82,6 @@
 	function formatRating(rating: number): string {
 		return `${rating.toLocaleString('sv-SE', { maximumFractionDigits: 1 })}/5`;
 	}
-
-	function getBarWidth(value: number): string {
-		return `${Math.max(0, Math.min(100, (value / 5) * 100))}%`;
-	}
 </script>
 
 <svelte:head>
@@ -98,10 +95,7 @@
 			En påhittad läsk som visar sidans alla detaljer. Bild och värden är exempel.
 		</p>
 	{/if}
-	<a
-		href={resolve('/')}
-		class="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-secondary transition-colors hover:text-ink"
-	>
+	<a href={resolve('/')} class="btn btn-secondary">
 		<ArrowLongLeft className="size-5" />
 		<span>Tillbaka till recensioner</span>
 	</a>
@@ -231,12 +225,7 @@
 									>{formatRating(field.value)}</span
 								>
 							</div>
-							<div class="h-1.5 w-full rounded-full bg-line" aria-hidden="true">
-								<div
-									class="h-1.5 rounded-full bg-accent"
-									style={`width: ${getBarWidth(field.value)}`}
-								></div>
-							</div>
+							<RatingCells value={field.value} />
 						</li>
 					{/each}
 				</ul>
@@ -265,12 +254,7 @@
 										{formatRating(bar.venueRatings[field.key])}
 									</span>
 								</div>
-								<div class="h-1.5 w-full rounded-full bg-line" aria-hidden="true">
-									<div
-										class="h-1.5 rounded-full bg-accent"
-										style={`width: ${getBarWidth(bar.venueRatings[field.key])}`}
-									></div>
-								</div>
+								<RatingCells value={bar.venueRatings[field.key]} />
 							</li>
 						{/each}
 					</ul>

@@ -27,6 +27,7 @@ test('warm themes persist across pages and reloads under the static CSP', async 
 	await page.screenshot({ path: testInfo.outputPath('home-light.png'), fullPage: true });
 	await page.getByRole('link', { name: 'Statistik', exact: true }).click();
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+	await page.screenshot({ path: testInfo.outputPath('statistics-light.png'), fullPage: true });
 	await page.reload();
 	await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 	await page.goto('testsoda/');

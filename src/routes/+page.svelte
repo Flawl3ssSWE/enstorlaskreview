@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { reviewerKey, reviewScore, selectReviewer, favoriteLabel } from '$lib/content/soda';
 	import { capitalizeAuthorName } from '$lib/utils/authors';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { watchUserLocation } from '$lib/client/user-location';
+	import { distanceKm } from '$lib/utils/review-distance';
+	import type { UserLocationState } from '$lib/types/review-location';
 	import { resolve } from '$app/paths';
 	import Card from '$lib/components/Card.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
@@ -10,16 +13,33 @@
 	import { matchesAdvancedFilters, readAdvancedFilters, parseMaxPrice } from '$lib/content/filters';
 	import type { PublicReview } from '$lib/types/bar-review';
 
-	type ReviewSort = 'latest' | 'oldest' | 'score';
+	type ReviewSort = 'latest' | 'oldest' | 'score' | 'nearest';
 
 	const sortOptions: Array<{ value: ReviewSort; label: string }> = [
 		{ value: 'latest', label: 'Senaste' },
 		{ value: 'oldest', label: 'Äldsta' },
-		{ value: 'score', label: 'Högst betyg' }
+		{ value: 'score', label: 'Högst betyg' },
+		{ value: 'nearest', label: 'Närmast' }
 	];
 
 	let { data } = $props();
 	let search = $state('');
+	let userLocation = $state<UserLocationState>({ position: null, error: null });
+	let locationRequested = $state(false);
+	let stopLocation: (() => void) | undefined;
+	function requestLocation() {
+		stopLocation?.();
+		locationRequested = true;
+		userLocation = { position: null, error: null };
+		stopLocation = watchUserLocation((state) => (userLocation = state));
+	}
+	function clearLocation() {
+		stopLocation?.();
+		stopLocation = undefined;
+		locationRequested = false;
+		userLocation = { position: null, error: null };
+	}
+	onDestroy(clearLocation);
 	let sort = $state<ReviewSort>('latest');
 	let reviewer = $state('');
 	let drinkTypes = $state<string[]>([]);
@@ -77,7 +97,7 @@
 
 	const normalize = (value: string) => value.toLowerCase();
 	const normalizeSort = (value: string | null | undefined): ReviewSort => {
-		if (value === 'oldest' || value === 'score') return value;
+		if (value === 'oldest' || value === 'score' || value === 'nearest') return value;
 		return 'latest';
 	};
 
@@ -106,6 +126,15 @@
 
 	const sortBars = (bars: PublicReview[], selectedSort: ReviewSort) => {
 		return [...bars].sort((first, second) => {
+			if (selectedSort === 'nearest' && userLocation.position) {
+				const firstDistance = distanceKm(userLocation.position, first);
+				const secondDistance = distanceKm(userLocation.position, second);
+				if (firstDistance === null && secondDistance !== null) return 1;
+				if (secondDistance === null && firstDistance !== null) return -1;
+				const difference = (firstDistance ?? 0) - (secondDistance ?? 0);
+				if (difference) return difference;
+				return compareByCreated(first, second, 'desc');
+			}
 			if (selectedSort === 'score') {
 				const ratingDiff = second.rating - first.rating || reviewScore(second) - reviewScore(first);
 				if (ratingDiff !== 0) return ratingDiff;
@@ -202,6 +231,7 @@
 	const handleSortChange = (event: Event) => {
 		const nextSort = normalizeSort((event.currentTarget as HTMLSelectElement).value);
 		sort = nextSort;
+		if (sort !== 'nearest') clearLocation();
 		updateUrl(search, nextSort);
 	};
 </script>
@@ -214,16 +244,15 @@
 	/>
 </svelte:head>
 <section class="page-shell">
-	<div class="mx-auto w-full max-w-6xl">
-		<p class="text-xs font-semibold uppercase tracking-[0.34em] text-accent">En stor läsk review</p>
-		<h1 class="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-ink sm:text-5xl">
+	<div class="glass-panel p-6 sm:p-8">
+		<h1 class="text-balance max-w-3xl text-3xl font-semibold leading-tight text-ink sm:text-5xl">
 			Hitta din nästa favoritläsk.
 		</h1>
-		<p class="mt-4 max-w-2xl text-sm leading-relaxed text-secondary sm:text-base">
+		<p class="mt-4 max-w-2xl text-base leading-relaxed text-secondary">
 			Smak, bubblor och betyg. Hitta något gott till nästa glas.
 		</p>
 
-		<div class="mt-8 border-y border-line py-5">
+		<div class="mt-8">
 			<div class="grid grid-cols-2 gap-3 lg:flex lg:items-end">
 				<div class="col-span-2 flex min-w-0 flex-1 items-center gap-2">
 					<div class="min-w-0 flex-1">
@@ -236,7 +265,7 @@
 						aria-expanded={filtersOpen}
 						aria-controls="advanced-filters"
 						onclick={() => (filtersOpen = !filtersOpen)}
-						class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-line hover:bg-surface focus-visible:outline-accent {filtersOpen ||
+						class="relative flex w-12 self-stretch shrink-0 items-center justify-center rounded-2xl border border-line hover:bg-surface focus-visible:outline-accent {filtersOpen ||
 						activeFilterCount > 0
 							? 'bg-surface text-accent'
 							: 'bg-surface-raised text-secondary'}"
@@ -252,65 +281,64 @@
 					</button>
 				</div>
 				<label class="flex min-w-0 shrink-0 flex-col gap-1 lg:w-48">
-					<span class="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted"
-						>Recensent</span
-					>
-					<select
-						bind:value={reviewer}
-						onchange={() => updateUrl(search, sort)}
-						class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-4 text-sm font-semibold text-secondary focus:ring-2 focus:ring-accent/40"
-					>
+					<span class="field-label">Recensent</span>
+					<select bind:value={reviewer} onchange={() => updateUrl(search, sort)} class="field">
 						<option value="">Alla recensenter</option>
 						{#each reviewers as [key, name]}<option value={key}>{capitalizeAuthorName(name)}</option
 							>{/each}
 					</select>
 				</label>
 				<label class="flex min-w-0 shrink-0 flex-col gap-1 lg:w-48">
-					<span class="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-						Sortera
-					</span>
-					<select
-						value={sort}
-						onchange={handleSortChange}
-						class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-4 text-sm font-semibold text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none backdrop-blur-md focus:ring-2 focus:ring-accent/40"
-					>
+					<span class="field-label"> Sortera </span>
+					<select value={sort} onchange={handleSortChange} class="field">
 						{#each sortOptions as option}
 							<option value={option.value}>{option.label}</option>
 						{/each}
 					</select>
 				</label>
 			</div>
+			{#if sort === 'nearest'}
+				<div class="mt-4 space-y-2">
+					<button
+						type="button"
+						class="btn btn-secondary"
+						onclick={requestLocation}
+						disabled={locationRequested && !userLocation.error}
+					>
+						Visa avstånd från min position
+					</button>
+					<p class="text-sm text-muted">
+						Avstånd räknas fågelvägen i webbläsaren. Din position sparas eller skickas inte till
+						oss.
+					</p>
+					{#if !userLocation.position}<p role="status" class="text-sm text-secondary">
+							{userLocation.error ??
+								(locationRequested
+									? 'Hämtar din position…'
+									: 'Tillåt platsåtkomst för att sortera efter avstånd.')}
+							Visar senaste recensionerna tills din position är tillgänglig.
+						</p>{/if}
+				</div>
+			{/if}
 			<div id="advanced-filters" class="mt-4 border-t border-line pt-4" hidden={!filtersOpen}>
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 					<label class="flex flex-col gap-2 text-sm text-secondary">
 						Märke
-						<select
-							bind:value={brand}
-							onchange={() => updateUrl(search, sort)}
-							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-accent/40"
-						>
+						<select bind:value={brand} onchange={() => updateUrl(search, sort)} class="field">
 							<option value="">Alla märken</option>
 							{#each brands as name}<option value={name}>{name}</option>{/each}
 						</select>
 					</label>
 					<label class="flex flex-col gap-2 text-sm text-secondary">
 						Förpackning
-						<select
-							bind:value={container}
-							onchange={() => updateUrl(search, sort)}
-							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-accent/40"
-						>
+						<select bind:value={container} onchange={() => updateUrl(search, sort)} class="field">
 							<option value="">Alla förpackningar</option>
 							{#each DRINK_CONTAINERS as name}<option value={name}>{name}</option>{/each}
 						</select>
 					</label>
 					<label class="flex flex-col gap-2 text-sm text-secondary">
 						Lägsta betyg
-						<select
-							bind:value={minRating}
-							onchange={() => updateUrl(search, sort)}
-							class="h-11 w-full rounded-2xl border border-line bg-surface-raised px-3 text-ink focus:ring-2 focus:ring-accent/40"
-						>
+						<select bind:value={minRating} onchange={() => updateUrl(search, sort)} class="field">
 							<option value={0}>Alla betyg</option>
 							<option value={1}>Minst 1 av 3</option>
 							<option value={2}>Minst 2 av 3</option>
@@ -401,6 +429,7 @@
 			>
 				<Card
 					drink={bar}
+					distanceKm={distanceKm(userLocation.position, bar)}
 					title={bar.title}
 					description={bar.description}
 					rating={bar.rating}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PriceRuler from '$lib/components/price-ruler/PriceRuler.svelte';
 	import { untrack } from 'svelte';
 	import { parsePriceInput } from '$lib/utils/price';
 	import { DRINK_VOLUMES_ML } from '$lib/review-metadata';
@@ -6,11 +7,13 @@
 	let {
 		volumeMl = $bindable(),
 		beerPriceKr = $bindable(),
-		prefix
+		prefix,
+		ruler = false
 	}: {
 		volumeMl?: number;
 		beerPriceKr?: number;
 		prefix: string;
+		ruler?: boolean;
 	} = $props();
 	let priceInput = $state('');
 	$effect(() => {
@@ -33,8 +36,7 @@
 		customVolume = value === 'custom';
 		volumeMl = value === '' || customVolume ? undefined : Number(value);
 	}
-	const inputClass =
-		'mt-2 w-full rounded-xl border border-line bg-surface-raised px-3 py-2.5 text-ink focus:outline-accent';
+	const inputClass = 'field mt-2';
 </script>
 
 <div class="grid gap-5 sm:grid-cols-2">
@@ -82,6 +84,13 @@
 		/></label
 	>
 </div>
+{#if ruler}
+	<PriceRuler bind:price={beerPriceKr} />
+	<p class="text-sm text-muted">
+		Dra linjalen för att välja pris. Piltangenter ändrar med 10 öre; Page Up och Page Down med 10
+		kr. Du kan också skriva priset ovan.
+	</p>
+{/if}
 <p id={`${prefix}-price-help`} class="text-sm text-muted">
 	Ange 1–999 kr med högst en decimal, till exempel 12,5 eller 12.5.
 </p>

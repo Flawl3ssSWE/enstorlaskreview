@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import RatingCells from '$lib/components/RatingCells.svelte';
 	import HelpTip from '$lib/components/HelpTip.svelte';
 	import { SODA_RATING_METRICS } from '$lib/review-metadata';
 	import type { PageProps } from './$types';
@@ -93,16 +94,17 @@
 
 <section class="page-shell">
 	<div class="mx-auto w-full max-w-6xl">
-		<p class="text-xs font-semibold uppercase tracking-[0.34em] text-muted">En stor läsk review</p>
-		<h1 class="mt-4 text-3xl font-semibold leading-tight text-ink sm:text-5xl">Läsk i siffror.</h1>
-		<p class="mt-4 max-w-2xl text-sm leading-relaxed text-secondary sm:text-base">
+		<h1 class="text-balance text-3xl font-semibold leading-tight text-ink sm:text-5xl">
+			Läsk i siffror.
+		</h1>
+		<p class="mt-4 max-w-2xl text-base leading-relaxed text-secondary">
 			Favoriter, betyg och priser från våra recensioner.
 		</p>
 	</div>
 
 	{#if data.statistics.totalReviews === 0}
 		<div
-			class="mx-auto mt-8 w-full max-w-6xl rounded-3xl border border-line bg-surface p-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_30px_-26px_rgba(0,0,0,0.65)] backdrop-blur-xl"
+			class="mx-auto mt-8 w-full max-w-6xl rounded-3xl border border-line bg-surface p-8 text-center backdrop-blur-xl"
 		>
 			<h2 class="text-2xl font-semibold text-ink">Ingen statistik än</h2>
 			<p class="mt-3 text-sm leading-relaxed text-secondary">
@@ -116,25 +118,21 @@
 			</a>
 		</div>
 	{:else}
-		<div class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+		<div class="glass-panel mt-8 grid grid-cols-1 gap-x-8 p-6 sm:grid-cols-2 sm:p-8">
 			{#each cards as card}
-				<div
-					class="rounded-3xl border border-line bg-surface p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_30px_-26px_rgba(0,0,0,0.65)] backdrop-blur-xl"
-				>
+				<div class="border-b border-line py-5">
 					<div class="flex items-center gap-1">
-						<p class="text-xs font-semibold uppercase tracking-[0.22em] text-muted">{card.label}</p>
+						<p class="text-sm font-semibold text-secondary">{card.label}</p>
 						<HelpTip label={card.label} text={card.note} />
 					</div>
-					<p class="mt-3 text-4xl font-bold text-ink">{card.value}</p>
+					<p class="mt-2 text-2xl font-semibold tabular-nums text-ink">{card.value}</p>
 				</div>
 			{/each}
 		</div>
 
 		<div class="mx-auto mt-5 grid w-full max-w-6xl grid-cols-1 gap-5 lg:grid-cols-2">
 			{#each rankings as ranking}
-				<section
-					class="rounded-3xl border border-line bg-surface p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_30px_-26px_rgba(0,0,0,0.65)] backdrop-blur-xl"
-				>
+				<section class="glass-panel p-6">
 					<h2 class="text-xl font-semibold text-ink">{ranking.title}</h2>
 					{#if ranking.products.length}
 						<p class="mt-3 text-4xl font-bold text-accent">
@@ -160,9 +158,7 @@
 		</div>
 
 		{#if data.statistics.sodaReviewCount > 0}
-			<section
-				class="mx-auto mt-5 w-full max-w-6xl rounded-3xl border border-line bg-surface p-6 backdrop-blur-xl"
-			>
+			<section class="mx-auto mt-5 w-full max-w-6xl glass-panel p-6">
 				<h2 class="text-xl font-semibold text-ink">Läskens betygsprofil</h2>
 				<p class="mt-2 text-sm leading-relaxed text-secondary">
 					Snitt på skalan 0–5. Sötma och konsistens beskriver egenskaper, inte kvalitet.
@@ -182,15 +178,7 @@
 									{formatDecimal(metric.average)}{metric.average === null ? '' : ' / 5'}
 								</dd>
 							</div>
-							<div
-								aria-hidden="true"
-								class="mt-2 h-2 overflow-hidden rounded-full bg-surface-raised"
-							>
-								<div
-									class="h-full rounded-full bg-accent"
-									style:width={`${(metric.average ?? 0) * 20}%`}
-								></div>
-							</div>
+							<div class="mt-2"><RatingCells value={metric.average ?? 0} /></div>
 						</div>
 					{/each}
 				</dl>
