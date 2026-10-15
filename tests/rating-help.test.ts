@@ -1,3 +1,4 @@
+import { openEditorTools } from './review-editor-helpers';
 import { expect, test } from '@playwright/test';
 
 test('rating help opens on hover and keyboard focus and dismisses with Escape', async ({
@@ -36,6 +37,10 @@ test('help fits the mobile viewport and dismisses when tapping outside', async (
 
 test('generator keeps labelled inputs and their rating descriptions', async ({ page }) => {
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	const sweetness = page.getByRole('spinbutton', { name: 'Sötma', exact: true });
 	await expect(sweetness).toHaveAccessibleDescription(/0 = inte söt, 3 = perfekt, 5 = för söt/);
 	await expect(page.locator('#soda-sweetness-help')).toBeVisible();

@@ -1,10 +1,20 @@
 <script lang="ts">
-	import { onDestroy, tick } from 'svelte';
-	import { base, resolve } from '$app/paths';
+	import { onDestroy, tick, untrack } from 'svelte';
+	import FileUp from '@lucide/svelte/icons/file-up';
+	import Plus from '@lucide/svelte/icons/plus';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import ImageIcon from '@lucide/svelte/icons/image';
+	import Star from '@lucide/svelte/icons/star';
+	import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+	import Send from '@lucide/svelte/icons/send';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import ArrowRight from '@lucide/svelte/icons/arrow-right';
+	import { base } from '$app/paths';
 	import ImagePositionEditor from '$lib/components/ImagePositionEditor.svelte';
 	import DrinkAmountFields from '$lib/components/DrinkAmountFields.svelte';
 	import NutrientInput from '$lib/components/NutrientInput.svelte';
 	import ContainerSelect from '$lib/components/ContainerSelect.svelte';
+	import AutomaticField from '$lib/components/AutomaticField.svelte';
 	import RatingInputs from '$lib/components/RatingInputs.svelte';
 	import {
 		SERVING_METHODS,
@@ -23,6 +33,12 @@
 		publicationCompareUrl,
 		type ReviewPublication
 	} from '$lib/utils/github-reviews';
+	import {
+		suggestBrand,
+		suggestContainer,
+		suggestIce,
+		suggestionValue
+	} from '$lib/utils/review-suggestions';
 	import { suggestDrinkTypes } from '$lib/utils/drink-facts';
 	import { sodaScore } from '$lib/content/soda';
 	import { ratingFromAverage } from '$lib/utils/ratings';
@@ -36,28 +52,50 @@
 		ReviewContent
 	} from '$lib/types/bar-review';
 	import type { ReviewEditorData } from '$lib/types/review-editor';
-
-	let { data, wizard = false }: { data: ReviewEditorData; wizard?: boolean } = $props();
-	const steps = ['Om läsken', 'Läskbetyg', 'Din recension', 'Stället', 'Skicka recension'];
+	let { data, wizard: initialWizard = true }: { data: ReviewEditorData; wizard?: boolean } =
+		$props();
+	let wizard = $state(untrack(() => initialWizard));
+	let toolsOpen = $state(false);
+	const steps = ['Bild', 'Smak', 'Data', 'Skicka recension'];
+	const stepIcons = [ImageIcon, Star, ClipboardList, Send];
 	let step = $state(0);
 	let editorForm: HTMLFormElement;
 	async function goToStep(next: number) {
 		step = next;
 		await tick();
-		editorForm.querySelector<HTMLElement>(`[data-step="${step}"] h2`)?.focus();
+		const heading = editorForm.querySelector<HTMLElement>(`[data-step="${step}"] h2`);
+		heading?.focus();
+		heading?.scrollIntoView({ block: 'start' });
+	}
+	function revealInvalidField(field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+		let parent = field.parentElement;
+		while (parent && parent !== editorForm) {
+			if (parent instanceof HTMLDetailsElement) parent.open = true;
+			parent = parent.parentElement;
+		}
+		field.focus();
+		field.reportValidity();
+	}
+	function validateImage() {
+		imageError = imageBusy
+			? 'Vänta tills bilden är klar.'
+			: !image && !existingReview
+				? 'Välj en bild till recensionen.'
+				: imageError;
+		return !imageBusy && (!!existingReview || !!image) && !imageError;
 	}
 	function nextStep() {
+		if (step === 0 && !validateImage()) return;
 		const section = editorForm.querySelector(`[data-step="${step}"]`);
 		const invalid = section?.querySelector<
 			HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 		>('input:invalid, select:invalid, textarea:invalid');
 		if (invalid) {
-			invalid.reportValidity();
+			revealInvalidField(invalid);
 			return;
 		}
 		void goToStep(Math.min(steps.length - 1, step + 1));
 	}
-
 	let selectedReview = $state('');
 	let importedReview = $state<ReviewContent>();
 	let reviewFileInput: HTMLInputElement;
@@ -68,22 +106,36 @@
 	);
 	let favorite = $state(false);
 	let repurchasePotential = $state<number>();
+	let repurchaseElement: HTMLSelectElement;
+	$effect(() => {
+		repurchaseElement?.setCustomValidity(
+			Number.isInteger(repurchasePotential) &&
+				repurchasePotential! >= 0 &&
+				repurchasePotential! <= 5
+				? ''
+				: 'Välj återköpspotential från 0 till 5.'
+		);
+	});
 	let title = $state('');
 	let sodaId = $state('');
 	const suggestedSodaId = $derived(generateSodaId(title).slice(0, 100).replace(/-$/, ''));
 	const normalizedSodaId = $derived(sodaId.trim() ? generateSodaId(sodaId) : suggestedSodaId);
 	let customSlug = $state('');
-	let brand = $state('');
-	let author = $state('');
-	const suggestedSlug = $derived(generateSlug(`${title}${author.trim() ? `-${author}` : ''}`));
-	const slug = $derived(customSlug || suggestedSlug);
-	let container = $state<DrinkContainer>();
-	let customContainer = $state<string>();
-	let description = $state('');
-	let location = $state('');
-	let price = $state<number>();
-	let volumeMl = $state<number>();
-	let energyOverride = $state<boolean>();
+	const brands = $derived([
+		...new Set(
+			[
+				...data.sodas.map((soda) => soda.brand),
+				...data.reviews.map((review) => review.beerBrand ?? '')
+			].filter(Boolean)
+		)
+	]);
+	const authors = $derived([
+		...new Set([
+			'Anton',
+			...data.reviews.flatMap((review) => [review.author, ...(review.coAuthors ?? [])])
+		])
+	]);
+	let energyOverride = $state<boolean | null>();
 	let caffeineMgPer100Ml = $state<number>();
 	let caffeineMgPerContainer = $state<number>();
 	let carbohydrateGPer100Ml = $state<number>();
@@ -91,8 +143,53 @@
 	let proteinGPer100Ml = $state<number>();
 	let proteinGPerContainer = $state<number>();
 	let isElectrolyteDrink = $state<boolean>();
-	let proteinOverride = $state<boolean>();
+	let proteinOverride = $state<boolean | null>();
 	let sugarOverride = $state<ReviewContent['sugarType'] | null>();
+	let loadedSources = $state<Record<string, string | undefined>>({});
+	let servingMethods = $state<NonNullable<ReviewContent['servingMethods']>>([]);
+	let servingTemperature = $state<ReviewContent['servingTemperature']>();
+	let iceOverride = $state<boolean | null>();
+	const nutritionSource = $derived(
+		JSON.stringify([carbohydrateGPer100Ml, carbohydrateGPerContainer])
+	);
+	const caffeineSource = $derived(JSON.stringify([caffeineMgPer100Ml, caffeineMgPerContainer]));
+	const proteinSource = $derived(JSON.stringify([proteinGPer100Ml, proteinGPerContainer]));
+	const servingSource = $derived(JSON.stringify(servingMethods));
+	const servedWithIce = $derived(
+		suggestionValue(suggestIce(servingMethods), iceOverride, loadedSources.ice, servingSource) ??
+			undefined
+	);
+	function isAutomatic(key: string, override: unknown, source: string) {
+		return (
+			override === undefined || (loadedSources[key] !== undefined && loadedSources[key] !== source)
+		);
+	}
+	let brandOverride = $state<string>();
+	const brand = $derived(
+		suggestionValue(
+			suggestBrand(title, brands, data.sodas),
+			brandOverride,
+			loadedSources.brand,
+			title
+		)
+	);
+	let author = $state('Anton');
+	const suggestedSlug = $derived(generateSlug(`${title}${author.trim() ? `-${author}` : ''}`));
+	const slug = $derived(customSlug || suggestedSlug);
+	let volumeMl = $state<number>();
+	let containerOverride = $state<DrinkContainer | null>();
+	const container = $derived(
+		suggestionValue(
+			suggestContainer(volumeMl),
+			containerOverride,
+			loadedSources.container,
+			String(volumeMl)
+		) ?? undefined
+	);
+	let customContainer = $state<string>();
+	let description = $state('');
+	let location = $state('');
+	let price = $state<number>();
 	const suggestedTypes = $derived(
 		suggestDrinkTypes({
 			caffeineMgPer100Ml,
@@ -103,22 +200,38 @@
 			proteinGPerContainer
 		})
 	);
-	const isEnergyDrink = $derived(energyOverride ?? suggestedTypes.isEnergyDrink);
-	const isProteinDrink = $derived(proteinOverride ?? suggestedTypes.isProteinDrink);
-	const sugarType = $derived(
-		sugarOverride === null ? undefined : (sugarOverride ?? suggestedTypes.sugarType)
+	const isEnergyDrink = $derived(
+		suggestionValue(
+			suggestedTypes.isEnergyDrink,
+			energyOverride,
+			loadedSources.energy,
+			caffeineSource
+		) ?? false
 	);
-	const hasTypeOverride = $derived(
-		energyOverride !== undefined || proteinOverride !== undefined || sugarOverride !== undefined
+	const isProteinDrink = $derived(
+		suggestionValue(
+			suggestedTypes.isProteinDrink,
+			proteinOverride,
+			loadedSources.protein,
+			proteinSource
+		) ?? false
+	);
+	const sugarType = $derived(
+		suggestionValue(
+			suggestedTypes.sugarType ?? 'sugar-free',
+			sugarOverride,
+			loadedSources.sugar,
+			nutritionSource
+		) ?? undefined
 	);
 	function useAutomaticTypes() {
+		loadedSources.energy = undefined;
+		loadedSources.protein = undefined;
+		loadedSources.sugar = undefined;
 		energyOverride = undefined;
 		proteinOverride = undefined;
 		sugarOverride = undefined;
 	}
-	let servingMethods = $state<NonNullable<ReviewContent['servingMethods']>>([]);
-	let servingTemperature = $state<ReviewContent['servingTemperature']>();
-	let servedWithIce = $state<boolean>();
 	let nutritionVersion = $state(0);
 	let latitude = $state<number>();
 	let longitude = $state<number>();
@@ -175,7 +288,6 @@
 	let githubError = $state('');
 	let githubController: AbortController | undefined;
 	let githubGeneration = 0;
-
 	function disconnectGitHub() {
 		githubGeneration++;
 		githubController?.abort();
@@ -187,7 +299,6 @@
 		publishing = false;
 		githubError = '';
 	}
-
 	async function connectGitHub() {
 		if (!token.trim() || connecting) return;
 		const generation = ++githubGeneration;
@@ -209,17 +320,15 @@
 			if (generation === githubGeneration) connecting = false;
 		}
 	}
-
 	const inputClass = 'field mt-2';
 	const panelClass = 'glass-panel space-y-5 p-5 sm:p-7';
-
+	const sectionClass = $derived(wizard ? 'space-y-5 p-5 sm:p-7' : panelClass);
 	onDestroy(() => {
 		disconnectGitHub();
 		selection++;
 		importSelection++;
 		if (preview) URL.revokeObjectURL(preview);
 	});
-
 	async function selectImage(event: Event) {
 		const current = ++selection;
 		const file = (event.target as HTMLInputElement).files?.[0];
@@ -270,7 +379,6 @@
 			if (current === selection) imageBusy = false;
 		}
 	}
-
 	function download(blob: Blob, filename: string) {
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement('a');
@@ -281,16 +389,15 @@
 		link.remove();
 		setTimeout(() => URL.revokeObjectURL(url), 1000);
 	}
-
 	function selectSoda(event: Event) {
 		sodaId = (event.currentTarget as HTMLSelectElement).value;
 		const soda = data.sodas.find((soda) => soda.id === sodaId);
 		if (soda) {
 			title = soda.title;
-			brand = soda.brand;
+			brandOverride = soda.brand || undefined;
+			loadedSources.brand = undefined;
 		}
 	}
-
 	async function importReview(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
@@ -322,20 +429,17 @@
 						: 'Recensionen kunde inte läsas in.';
 		}
 	}
-
 	function selectPublishedReview() {
 		importSelection++;
 		importedReview = undefined;
 		importError = '';
 		loadReview();
 	}
-
 	function startNewReview() {
 		step = 0;
 		selectedReview = '';
 		selectPublishedReview();
 	}
-
 	async function reloadGitHubReview() {
 		if (!existingReview || !connectedToken || connecting || publishing) return;
 		const slug = existingReview.slug;
@@ -362,7 +466,6 @@
 			if (generation === githubGeneration) connecting = false;
 		}
 	}
-
 	function loadReview(baseline?: ReviewContent) {
 		githubBaseline = baseline;
 		publication = undefined;
@@ -370,9 +473,9 @@
 		comparisonUrl = '';
 		publicationProgress = '';
 		githubError = '';
-
 		nutritionVersion++;
 		const product = existingReview;
+		loadedSources = {};
 		if (!product) {
 			imageFocusX = 50;
 			imageFocusY = 50;
@@ -380,7 +483,7 @@
 			title = '';
 			sodaId = '';
 			customSlug = '';
-			brand = '';
+			brandOverride = undefined;
 			location = '';
 			price = undefined;
 			volumeMl = undefined;
@@ -396,11 +499,11 @@
 			sugarOverride = undefined;
 			servingMethods = [];
 			servingTemperature = undefined;
-			servedWithIce = undefined;
+			iceOverride = undefined;
 			latitude = undefined;
 			longitude = undefined;
-			author = '';
-			container = undefined;
+			author = 'Anton';
+			containerOverride = undefined;
 			customContainer = undefined;
 			description = '';
 			favorite = false;
@@ -428,26 +531,26 @@
 		title = product.title;
 		sodaId = product.sodaId ?? '';
 		customSlug = product.slug;
-		brand = product.beerBrand ?? '';
+		brandOverride = product.beerBrand ?? '';
 		location = product.location;
 		price = product.beerPriceKr;
-		energyOverride = product.isEnergyDrink;
+		energyOverride = product.isEnergyDrink ?? null;
 		caffeineMgPer100Ml = product.caffeineMgPer100Ml;
 		caffeineMgPerContainer = product.caffeineMgPerContainer;
 		carbohydrateGPer100Ml = product.carbohydrateGPer100Ml;
 		carbohydrateGPerContainer = product.carbohydrateGPerContainer;
 		proteinGPer100Ml = product.proteinGPer100Ml;
 		proteinGPerContainer = product.proteinGPerContainer;
-		proteinOverride = product.isProteinDrink;
+		proteinOverride = product.isProteinDrink ?? null;
 		isElectrolyteDrink = product.isElectrolyteDrink;
-		sugarOverride = product.sugarType;
+		sugarOverride = product.sugarType ?? null;
 		servingMethods = [...(product.servingMethods ?? [])];
 		servingTemperature = product.servingTemperature;
-		servedWithIce = product.servedWithIce;
+		iceOverride = product.servedWithIce ?? null;
 		latitude = product.latitude;
 		longitude = product.longitude;
 		author = product.author;
-		container = product.container;
+		containerOverride = product.container ?? null;
 		customContainer = product.customContainer;
 		volumeMl = product.volumeMl;
 		description = product.description;
@@ -458,6 +561,23 @@
 		venueRatings = product.venueRatings
 			? { ...product.venueRatings }
 			: (Object.fromEntries(VENUE_RATING_METRICS.map(({ key }) => [key, 3])) as VenueRatingValues);
+		loadedSources = {
+			brand: product.beerBrand === undefined ? title : undefined,
+			container: product.container === undefined ? String(volumeMl) : undefined,
+			ice: product.servedWithIce === undefined ? JSON.stringify(servingMethods) : undefined,
+			sugar:
+				product.sugarType === undefined
+					? JSON.stringify([carbohydrateGPer100Ml, carbohydrateGPerContainer])
+					: undefined,
+			energy:
+				product.isEnergyDrink === undefined
+					? JSON.stringify([caffeineMgPer100Ml, caffeineMgPerContainer])
+					: undefined,
+			protein:
+				product.isProteinDrink === undefined
+					? JSON.stringify([proteinGPer100Ml, proteinGPerContainer])
+					: undefined
+		};
 		image = undefined;
 		if (preview) URL.revokeObjectURL(preview);
 		preview = '';
@@ -466,9 +586,14 @@
 		imageError = '';
 		error = '';
 		notice = '';
+		if (wizard) step = 0;
 	}
-
 	async function prepareSubmission() {
+		if (!validateImage()) {
+			await goToStep(0);
+			editorForm.querySelector<HTMLInputElement>('#image')?.focus();
+			return;
+		}
 		const invalid = editorForm.querySelector<
 			HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 		>('input:invalid, select:invalid, textarea:invalid');
@@ -478,7 +603,7 @@
 				const section = invalid.closest<HTMLElement>('[data-step]');
 				await goToStep(Number(section?.dataset.step ?? 0));
 			}
-			invalid.reportValidity();
+			revealInvalidField(invalid);
 			return;
 		}
 		if ((!image && !existingReview) || imageBusy)
@@ -493,7 +618,6 @@
 			editing: !!existingReview
 		});
 	}
-
 	function buildReview(): ReviewContent {
 		const now = new Date().toISOString();
 		return {
@@ -513,12 +637,14 @@
 			...(repurchasePotential !== undefined ? { repurchasePotential } : {}),
 			sodaRatings: { ...sodaRatings },
 			...(container ? { container } : {}),
-			...(customContainer !== undefined ? { customContainer: customContainer.trim() } : {}),
+			...(container === 'Annan' && customContainer !== undefined
+				? { customContainer: customContainer.trim() }
+				: {}),
 			...(volumeMl !== undefined ? { volumeMl } : {}),
 			...(rateVenue ? { venueRatings: { ...venueRatings } } : {}),
 			...(existingReview?.coAuthors ? { coAuthors: existingReview.coAuthors } : {}),
-			...(energyOverride !== undefined || isEnergyDrink ? { isEnergyDrink } : {}),
-			...(proteinOverride !== undefined || isProteinDrink ? { isProteinDrink } : {}),
+			...(typeof energyOverride === 'boolean' || isEnergyDrink ? { isEnergyDrink } : {}),
+			...(typeof proteinOverride === 'boolean' || isProteinDrink ? { isProteinDrink } : {}),
 			...(isElectrolyteDrink !== undefined ? { isElectrolyteDrink } : {}),
 			...(sugarType ? { sugarType } : {}),
 			...(servingMethods.length ? { servingMethods: [...servingMethods] } : {}),
@@ -542,14 +668,12 @@
 				: {})
 		};
 	}
-
 	const publicationMatchesForm = $derived(
 		!!publication &&
 			publication.input.image === image &&
 			submissionKey(publication.input) ===
 				submissionKey({ review: buildReview(), json: '', editing: !!existingReview })
 	);
-
 	async function exportReview(event: SubmitEvent) {
 		event.preventDefault();
 		if (publishing || connecting) return;
@@ -621,619 +745,820 @@
 		content="Skapa en läskrecension, skicka som PR eller ladda ner som JSON."
 	/></svelte:head
 >
-
 <section class="page-shell space-y-6">
 	<header class="space-y-3">
-		<a class="btn btn-secondary" href={wizard ? resolve('/skapa/') : `${base}/skapa/wizard/`}>
-			{wizard ? 'Visa hela formuläret' : 'Skapa steg för steg'}
-		</a>
-		<h1 class="text-3xl font-semibold sm:text-4xl">
-			{existingReview ? 'Redigera recension' : 'Skapa recension'}
-		</h1>
-		<div class="flex flex-wrap gap-3">
+		<div class="flex items-center justify-between gap-4">
+			<h1 class="text-xl font-semibold tracking-tight sm:text-2xl">
+				{existingReview ? 'Redigera recension' : 'Skapa recension'}
+			</h1>
 			<button
 				type="button"
+				aria-expanded={toolsOpen}
+				aria-controls="review-tools"
 				disabled={publishing || connecting}
-				onclick={() => reviewFileInput.click()}
-				class="rounded-full border border-line bg-surface-raised px-5 py-3 font-semibold text-ink"
-				>Ladda in recension från JSON</button
+				onclick={() => (toolsOpen = !toolsOpen)}
+				class="inline-flex min-h-11 shrink-0 items-center gap-2 px-2 text-sm text-secondary hover:text-ink disabled:opacity-60"
+				>Verktyg<ChevronDown
+					size={16}
+					aria-hidden="true"
+					class={toolsOpen ? 'rotate-180' : ''}
+				/></button
 			>
-			{#if existingReview}<button
-					type="button"
-					disabled={publishing || connecting}
-					onclick={startNewReview}
-					class="rounded-full border border-line px-5 py-3 font-semibold text-secondary"
-					>Skapa ny recension</button
-				>{/if}
-			<input
-				disabled={publishing || connecting}
-				bind:this={reviewFileInput}
-				type="file"
-				accept=".json,application/json"
-				aria-label="Recensionens JSON-fil"
-				onchange={importReview}
-				class="hidden"
-			/>
 		</div>
-		<p class="text-sm text-muted">
-			Ladda in en tidigare sparad JSON-fil eller välj en publicerad recension nedan.
-		</p>
-		{#if importError}<p role="alert" class="text-accent">{importError}</p>{/if}
-		{#if importedReview}<p class="text-sm text-secondary">
-				Inläst fil: {importedReview.slug}.json
-			</p>{/if}
-		<p class="text-secondary" hidden={wizard}>
-			Ange värden från 0 till 5. Sötma: 0 = inte söt, 3 = perfekt, 5 = för söt. Konsistens beskriver
-			hur rinnig läsken är. Passande konsistens mäter hur väl den passar läsken. För övriga betyg är
-			5 bäst. Använd heltal. Smak väger 30 %, sötmabalans, kolsyra och drickbarhet 15 % vardera,
-			passande konsistens och matchar namnet 10 % vardera, prisvärdhet 5 %. Varje recension har en
-			egen författare, ett eget pris och en egen sida.
-		</p>
-		<p class="text-sm text-muted">
-			Formuläret och bilderna behandlas i din webbläsare. Bara när du skickar en PR överförs
-			recensionen till GitHub. Formuläret sparas inte när du lämnar sidan.
-		</p>
-	</header>
-	<noscript><p>Aktivera JavaScript för att skapa och ladda ner recensioner.</p></noscript>
-	{#if data.reviews.length}
-		<label class="block" for="existing-product"
-			>Redigera en befintlig recension
-			<select
-				id="existing-product"
-				disabled={publishing || connecting}
-				bind:value={selectedReview}
-				onchange={selectPublishedReview}
-				class={inputClass}
+		<div
+			id="review-tools"
+			hidden={!toolsOpen}
+			class="space-y-4 rounded-2xl border border-line bg-surface-raised/40 p-4 sm:p-5"
+		>
+			<div
+				role="group"
+				aria-label="Visningsläge"
+				class="inline-flex shrink-0 rounded-2xl border border-line bg-surface-raised p-1"
 			>
-				<option value="">Ny recension</option>
-				{#each data.reviews as product}<option value={product.slug}
-						>{product.title} – {product.author}</option
-					>{/each}
-			</select>
-		</label>
-	{/if}
-	{#if wizard}
-		<nav aria-label="Recensionens steg" class="flex flex-wrap gap-2">
-			{#each steps as label, index}
 				<button
 					type="button"
-					class="btn {step === index ? 'btn-primary' : 'btn-secondary'}"
-					aria-current={step === index ? 'step' : undefined}
+					aria-label="Skapa steg för steg"
+					aria-pressed={wizard}
 					disabled={publishing || connecting}
-					onclick={() => goToStep(index)}
+					onclick={() => (wizard = true)}
+					class="min-h-11 flex-1 whitespace-nowrap rounded-xl px-3 text-xs font-semibold transition-colors sm:px-4 sm:text-sm disabled:opacity-60 {wizard
+						? 'bg-accent-soft text-accent'
+						: 'text-muted hover:text-ink'}">Steg för steg</button
 				>
-					{index + 1}. {label}
-				</button>
-			{/each}
-		</nav>
-		<p role="status" class="text-sm text-muted">Steg {step + 1} av {steps.length}: {steps[step]}</p>
-	{/if}
-	<form bind:this={editorForm} onsubmit={exportReview} novalidate={wizard}>
-		<fieldset disabled={publishing || connecting} class="space-y-6 min-w-0">
-			<section class={panelClass} data-step="0" hidden={wizard && step !== 0}>
-				<h2 tabindex="-1" class="text-xl font-semibold">Om läsken</h2>
-				{#if data.sodas.length}
-					<label class="block" for="linked-soda"
-						>Läsk att länka recensionen till (valfritt)
-						<select
-							id="linked-soda"
-							value={data.sodas.some((soda) => soda.id === normalizedSodaId)
-								? normalizedSodaId
-								: ''}
-							onchange={selectSoda}
-							class={inputClass}
-						>
-							<option value="">Ny läsk (automatiskt ID)</option>
-							{#each data.sodas as soda}<option value={soda.id}>{soda.title} ({soda.id})</option
-								>{/each}
-						</select>
-					</label>
-				{/if}
-				<label class="block" for="soda-id"
-					>Läsk-ID (automatiskt)
-					<input
-						id="soda-id"
-						maxlength="100"
-						value={sodaId || suggestedSodaId}
-						oninput={(event) => (sodaId = event.currentTarget.value)}
-						class={inputClass}
-						placeholder="Till exempel pepsi-max-tropical"
-						aria-describedby="soda-id-help soda-id-preview"
-					/>
-				</label>
-				<p id="soda-id-help" class="text-sm text-muted">
-					ID skapas automatiskt från läskens namn, utan författarens namn. Samma läsk får samma ID
-					och recensionerna behåller egna filnamn, priser och betyg. Du kan välja en befintlig läsk
-					eller ange ett eget ID. Töm fältet för att använda det automatiska ID:t igen.
-				</p>
-				<p id="soda-id-preview" class="text-sm text-secondary" aria-live="polite">
-					{#if normalizedSodaId}Läsk-ID som sparas: <span class="font-semibold text-ink"
-							>{normalizedSodaId}</span
-						>
-					{:else if sodaId.trim()}Ange ett läsknamn eller ID med minst en bokstav a–z eller siffra.
-					{:else}ID skapas när du anger läskens namn.{/if}
-				</p>
-
-				<label class="block" for="title"
-					>Läskens namn / rubrik<input
-						id="title"
-						required
-						maxlength="200"
-						bind:value={title}
-						class={inputClass}
-						placeholder="Till exempel Hallonsoda"
-					/></label
+				<button
+					type="button"
+					aria-label="Visa hela formuläret"
+					aria-pressed={!wizard}
+					disabled={publishing || connecting}
+					onclick={() => (wizard = false)}
+					class="min-h-11 flex-1 whitespace-nowrap rounded-xl px-3 text-xs font-semibold transition-colors sm:px-4 sm:text-sm disabled:opacity-60 {!wizard
+						? 'bg-accent-soft text-accent'
+						: 'text-muted hover:text-ink'}">Hela formuläret</button
 				>
-				<div class="grid gap-5 sm:grid-cols-2">
-					<label for="brand"
-						>Märke (valfritt)<input
-							id="brand"
-							maxlength="100"
-							bind:value={brand}
-							class={inputClass}
-						/></label
-					>
-				</div>
-				<fieldset class="space-y-3">
-					<legend class="font-semibold">Serveringsmetod (valfritt, välj flera)</legend>
-					<div class="flex flex-wrap gap-x-5 gap-y-2">
-						{#each SERVING_METHODS as method}
-							<label class="flex min-h-11 items-center gap-2"
-								><input
-									type="checkbox"
-									value={method}
-									bind:group={servingMethods}
-									class="size-5 accent-ember"
-								/>{method}</label
+			</div>
+			<div class="space-y-3">
+				<div class="grid items-end gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+					{#if data.reviews.length}
+						<label class="block min-w-0 text-sm font-medium text-secondary" for="existing-product"
+							>Redigera en befintlig recension
+							<select
+								id="existing-product"
+								disabled={publishing || connecting}
+								bind:value={selectedReview}
+								onchange={selectPublishedReview}
+								class="field mt-2 text-ink"
 							>
-						{/each}
+								<option value="">Ny recension</option>
+								{#each data.reviews as product}<option value={product.slug}
+										>{product.title} – {product.author}</option
+									>{/each}
+							</select>
+						</label>
+					{/if}
+					<div class="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							disabled={publishing || connecting}
+							onclick={() => reviewFileInput.click()}
+							class="btn btn-secondary"
+							><FileUp size={18} aria-hidden="true" />Ladda in recension från JSON</button
+						>
+						{#if existingReview}<button
+								type="button"
+								disabled={publishing || connecting}
+								onclick={startNewReview}
+								class="btn btn-secondary"
+								><Plus size={18} aria-hidden="true" />Skapa ny recension</button
+							>{/if}
+						<input
+							disabled={publishing || connecting}
+							bind:this={reviewFileInput}
+							type="file"
+							accept=".json,application/json"
+							aria-label="Recensionens JSON-fil"
+							onchange={importReview}
+							class="hidden"
+						/>
 					</div>
+				</div>
+				{#if importError}<p role="alert" class="text-sm text-accent">{importError}</p>{/if}
+				{#if importedReview}<p class="break-words text-sm text-secondary">
+						Inläst fil: {importedReview.slug}.json
+					</p>{/if}
+			</div>
+			<div class="grid gap-x-6 border-t border-line pt-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+				<details class="min-w-0 space-y-3 text-sm text-muted">
+					<summary class="min-h-11 cursor-pointer py-3 text-secondary hover:text-ink"
+						>Hjälp med formuläret</summary
+					>
+					<p class="text-sm text-muted">
+						Ladda in en tidigare sparad JSON-fil eller välj en publicerad recension nedan.
+					</p>
+					<p class="text-sm text-muted">
+						Formuläret och bilderna behandlas i din webbläsare. Bara när du skickar en PR överförs
+						recensionen till GitHub. Formuläret sparas inte när du lämnar sidan.
+					</p>
+					<p class="text-sm text-muted">
+						Välj en JPEG-, PNG-, WebP-, HEIC- eller HEIF-bild på högst 10 MiB. Bilden roteras,
+						skalas till högst 1 600 pixlar och komprimeras till WebP på högst 500 KiB. Originalets
+						metadata, inklusive GPS-position, tas bort.
+					</p>
+					<p id="image-position-help" class="text-sm text-muted">
+						Dra bilden för att justera utsnittet som visas i recensionen och på recensionskortet. Du
+						kan också använda piltangenterna när bilden är markerad, och hålla Skift för större
+						steg. Zooma för att kunna flytta bilden mer. Originalbilden behålls.
+					</p>
+					<p class="text-sm text-muted">Markdown för rubriker, listor och fetstil går bra.</p>
 					<p class="text-sm text-muted">
 						Hur drack du drycken? Kombinera till exempel Glas och Sugrör. Förpackning är vad drycken
 						såldes i.
 					</p>
-				</fieldset>
-				<div class="grid gap-5 sm:grid-cols-2">
-					<label for="serving-temperature"
-						>Serveringstemperatur (valfritt)
-						<select id="serving-temperature" bind:value={servingTemperature} class={inputClass}>
-							<option value={undefined}>Ej angiven</option>
-							{#each SERVING_TEMPERATURES as temperature}<option value={temperature}
-									>{temperature}</option
-								>{/each}
-						</select>
-					</label>
-					<label for="served-with-ice"
-						>Is (valfritt)
-						<select id="served-with-ice" bind:value={servedWithIce} class={inputClass}>
-							<option value={undefined}>Ej angivet</option>
-							<option value={true}>Med is</option>
-							<option value={false}>Utan is</option>
-						</select>
-					</label>
-				</div>
-				{#key nutritionVersion}
-					<NutrientInput
-						label="Koffein"
-						unit="mg"
-						prefix="caffeine"
-						required={isEnergyDrink}
-						{volumeMl}
-						bind:per100Ml={caffeineMgPer100Ml}
-						bind:perContainer={caffeineMgPerContainer}
-					/>
-					<NutrientInput
-						label="Kolhydrater"
-						unit="g"
-						prefix="carbohydrate"
-						{volumeMl}
-						bind:per100Ml={carbohydrateGPer100Ml}
-						bind:perContainer={carbohydrateGPerContainer}
-					/>
-					<NutrientInput
-						label="Protein"
-						unit="g"
-						prefix="protein"
-						{volumeMl}
-						bind:per100Ml={proteinGPer100Ml}
-						bind:perContainer={proteinGPerContainer}
-					/>
-				{/key}
-				<label class="flex items-center gap-3"
-					><input
-						type="checkbox"
-						checked={isEnergyDrink}
-						onchange={(event) => (energyOverride = event.currentTarget.checked)}
-						class="size-5 accent-ember"
-					/>Energidryck</label
+					<p class="text-sm text-muted">
+						Välj Elektrolytdryck enligt etiketten. Det kan kombineras med övriga dryckstyper.
+					</p>
+					<p class="text-sm text-muted">
+						Dryckstyp fylls i automatiskt: koffein över 0 ger Energidryck, protein över 0 ger
+						Proteindryck och kolhydrater över 0 föreslår Sockrad. 0 g kolhydrater föreslår
+						Sockerfri. Tomma kolhydratvärden föreslår Sockerfri. Du kan ändra valen enligt
+						etiketten; koffein finns även i vanlig läsk och kolhydrater är inte alltid socker.
+					</p>
+					<p>
+						Välj volym innan du byter mellan näringsvärden per 100 ml och per förpackning. Utan
+						volym kan värdet inte räknas om.
+					</p>
+				</details>
+				<p class="text-xs text-muted sm:py-3">Formuläret sparas inte när du lämnar sidan.</p>
+			</div>
+		</div>
+	</header>
+	<noscript><p>Aktivera JavaScript för att skapa och ladda ner recensioner.</p></noscript>
+	{#if wizard}
+		<nav
+			aria-label="Recensionens steg"
+			class="grid w-fit max-w-full grid-cols-2 items-center gap-2 rounded-3xl bg-surface/95 p-3 sm:flex sm:flex-wrap"
+		>
+			{#each steps as label, index}
+				{@const Icon = stepIcons[index]}
+				<button
+					type="button"
+					aria-label={`${index + 1}. ${label}`}
+					aria-current={step === index ? 'step' : undefined}
+					disabled={publishing || connecting}
+					onclick={() => goToStep(index)}
+					class="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors sm:px-4 sm:text-sm disabled:cursor-not-allowed disabled:opacity-60 {step ===
+					index
+						? 'border-ember bg-ember text-white'
+						: 'border-line bg-surface/80 text-secondary hover:bg-accent-soft hover:text-accent'}"
 				>
-				<label class="flex items-center gap-3"
-					><input
-						type="checkbox"
-						checked={isProteinDrink}
-						onchange={(event) => (proteinOverride = event.currentTarget.checked)}
-						class="size-5 accent-ember"
-					/>Proteindryck</label
-				>
-				<label class="flex items-center gap-3">
-					<input
-						type="checkbox"
-						checked={isElectrolyteDrink ?? false}
-						onchange={(event) => (isElectrolyteDrink = event.currentTarget.checked)}
-						class="size-5 accent-ember"
-					/>Elektrolytdryck
-				</label>
-				<p class="text-sm text-muted">
-					Välj Elektrolytdryck enligt etiketten. Det kan kombineras med övriga dryckstyper.
-				</p>
-				<label class="block" for="sugar-type"
-					>Socker (valfritt)
-					<select
-						id="sugar-type"
-						value={sugarType ?? ''}
-						onchange={(event) =>
-							(sugarOverride = event.currentTarget.value
-								? (event.currentTarget.value as ReviewContent['sugarType'])
-								: null)}
-						class={inputClass}
+					<Icon size={15} strokeWidth={1.75} aria-hidden="true" />{index + 1}. {index ===
+					steps.length - 1
+						? 'Skicka'
+						: label}
+				</button>
+			{/each}
+		</nav>
+		<p role="status" class="sr-only">Steg {step + 1} av {steps.length}: {steps[step]}</p>
+	{/if}
+	<form bind:this={editorForm} onsubmit={exportReview} novalidate>
+		<fieldset disabled={publishing || connecting} class="min-w-0">
+			<div class={wizard ? 'glass-panel' : 'space-y-6'}>
+				<section class={sectionClass} data-step="0" hidden={wizard && step !== 0}>
+					<h2 tabindex="-1" class="scroll-mt-32 text-xl font-semibold">Bild</h2>
+					<label class="block" for="image"
+						>Bild till recensionen<input
+							id="image"
+							type="file"
+							accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+							onchange={selectImage}
+							class={inputClass}
+						/></label
 					>
-						<option value="">Ej angivet</option>
-						<option value="sugar-free">Sockerfri</option>
-						<option value="sugared">Sockrad</option>
-					</select>
-				</label>
-				<p class="text-sm text-muted">
-					Dryckstyp fylls i automatiskt: koffein över 0 ger Energidryck, protein över 0 ger
-					Proteindryck och kolhydrater över 0 föreslår Sockrad. 0 g kolhydrater föreslår Sockerfri.
-					Tomma värden ger inget förslag. Du kan ändra valen enligt etiketten; koffein finns även i
-					vanlig läsk och kolhydrater är inte alltid socker.
-				</p>
-				{#if hasTypeOverride}
+					{#if imageBusy}<p role="status">Behandlar bilden…</p>{/if}
+					{#if imageError}<p role="alert" class="text-accent">{imageError}</p>{/if}
+					{#if image}<p class="text-sm text-muted">
+							Komprimerad bild: {Math.ceil(image.size / 1024)} KiB (WebP).
+						</p>{/if}
+					{#if importedReview && !previewSrc}<p class="text-sm text-muted">
+							Välj bilden {importedReview.image} för att förhandsvisa den. Du kan behålla bildens filnamn
+							när du laddar ner JSON-filen utan att välja en ny bild.
+						</p>{/if}
+					{#if previewSrc}
+						<div class="space-y-4">
+							<h3 class="font-semibold text-ink">Så visas bilden i recensionen</h3>
+							<ImagePositionEditor
+								src={previewSrc}
+								bind:focusX={imageFocusX}
+								bind:focusY={imageFocusY}
+								zoom={imageZoom}
+							/>
+							<label class="block" for="image-zoom">
+								Zoom: {Math.round(imageZoom * 100)} %
+								<input
+									id="image-zoom"
+									type="range"
+									min="1"
+									max="3"
+									step="0.05"
+									bind:value={imageZoom}
+									aria-describedby="image-position-help"
+									class="mt-2 block w-full accent-ember"
+								/>
+							</label>
+							<button
+								type="button"
+								class="rounded-full border border-line px-4 py-2 text-sm text-secondary"
+								onclick={() => {
+									imageFocusX = 50;
+									imageFocusY = 50;
+								}}>Centrera bilden</button
+							>
+							<button
+								type="button"
+								class="rounded-full border border-line px-4 py-2 text-sm text-secondary"
+								onclick={() => {
+									imageZoom = 1;
+									imageFocusX = 50;
+									imageFocusY = 50;
+								}}>Återställ utsnitt</button
+							>
+						</div>
+					{/if}
+				</section>
+				<section class={sectionClass} data-step="1" hidden={wizard && step !== 1}>
+					<h2 tabindex="-1" class="scroll-mt-32 text-xl font-semibold">Smak</h2>
+					<div
+						role="status"
+						aria-label="Förhandsvisning av totalbetyg"
+						aria-live="polite"
+						aria-atomic="true"
+						class="rounded-2xl border border-accent/30 bg-surface-raised p-5"
+					>
+						<p class="text-sm font-semibold text-secondary">Recensionens totalbetyg</p>
+						{#if previewScore !== undefined}
+							<p class="mt-2 text-4xl font-bold text-accent">{previewRating}/3</p>
+							<p class="mt-2 text-sm text-secondary">
+								Viktad poäng: {previewScore.toLocaleString('sv-SE', { maximumFractionDigits: 2 })}/5
+							</p>
+						{:else}
+							<p class="mt-2 text-sm text-secondary">
+								Fyll i alla läskbetyg med heltal mellan 0 och 5 för att se totalbetyget.
+							</p>
+						{/if}
+					</div>
+					<details class="text-sm text-muted">
+						<summary class="cursor-pointer">Så räknas totalbetyget</summary>
+						<p class="text-secondary">
+							Ange värden från 0 till 5. Sötma: 0 = inte söt, 3 = perfekt, 5 = för söt. Konsistens
+							beskriver hur rinnig läsken är. Passande konsistens mäter hur väl den passar läsken.
+							För övriga betyg är 5 bäst. Använd heltal. Smak väger 30 %, sötmabalans, kolsyra och
+							drickbarhet 15 % vardera, passande konsistens och matchar namnet 10 % vardera,
+							prisvärdhet 5 %. Varje recension har en egen författare, ett eget pris och en egen
+							sida.
+						</p>
+					</details>
+					<RatingInputs
+						metrics={SODA_RATING_METRICS.filter(({ key }) => key !== 'value')}
+						bind:values={sodaRatings}
+						prefix="soda"
+					/>
+					<label class="flex items-center gap-3"
+						><input type="checkbox" bind:checked={favorite} class="size-5 accent-ember" />Jag väljer
+						den här läsken som en läskfavorit</label
+					>
+					<p class="text-sm text-muted">
+						En läskfavorit är en läsk du aktivt väljer framför andra, inte bara tycker är värd att
+						prova.
+					</p>
+					<label class="block" for="repurchase-potential">
+						Återköpspotential
+						<select
+							id="repurchase-potential"
+							bind:this={repurchaseElement}
+							required
+							bind:value={repurchasePotential}
+							class={inputClass}
+							aria-describedby="repurchase-potential-help"
+						>
+							<option value="">Välj återköpspotential</option>
+							{#each REPURCHASE_POTENTIAL_LABELS as label, score}
+								<option value={score}>{score}/5 – {label}</option>
+							{/each}
+						</select>
+					</label>
+					<p id="repurchase-potential-help" class="text-sm text-muted">
+						Hur gärna köper du läsken igen? Påverkar inte helhetsbetyget.
+					</p>
+					<label class="block" for="description"
+						>Fri text<textarea
+							id="description"
+							rows="8"
+							required
+							maxlength="50000"
+							bind:value={description}
+							class={inputClass}
+							placeholder="Beskriv smaken och din upplevelse…"
+						></textarea></label
+					>
+				</section>
+				<section class={sectionClass} data-step="2" hidden={wizard && step !== 2}>
+					<h2 tabindex="-1" class="scroll-mt-32 text-xl font-semibold">Data</h2>
+					<p id="automatic-field-help" class="sr-only">Automatiskt förslag. Du kan ändra värdet.</p>
+					{#if data.sodas.length}
+						<label class="block" for="linked-soda"
+							>Läsk att länka recensionen till (valfritt)
+							<select
+								id="linked-soda"
+								value={data.sodas.some((soda) => soda.id === normalizedSodaId)
+									? normalizedSodaId
+									: ''}
+								onchange={selectSoda}
+								class={inputClass}
+							>
+								<option value="">Ny läsk (automatiskt ID)</option>
+								{#each data.sodas as soda}<option value={soda.id}>{soda.title} ({soda.id})</option
+									>{/each}
+							</select>
+						</label>
+					{/if}
+					<label class="block" for="title"
+						>Läskens namn / rubrik<input
+							id="title"
+							required
+							maxlength="200"
+							bind:value={title}
+							class={inputClass}
+							placeholder="Till exempel Hallonsoda"
+						/></label
+					>
+					<div class="grid gap-5 sm:grid-cols-2">
+						<AutomaticField
+							active={isAutomatic('brand', brandOverride, title) && !!brand}
+							field="Märke"
+							kind="input"
+						>
+							<label for="brand"
+								>Märke (valfritt)<input
+									id="brand"
+									data-automatic={isAutomatic('brand', brandOverride, title) && !!brand}
+									aria-describedby={isAutomatic('brand', brandOverride, title) && !!brand
+										? 'automatic-field-help'
+										: undefined}
+									maxlength="100"
+									value={brand}
+									oninput={(event) => {
+										brandOverride = event.currentTarget.value;
+										loadedSources.brand = undefined;
+									}}
+									list="review-brands"
+									class={inputClass}
+								/></label
+							>
+						</AutomaticField>
+					</div>
+					<label class="block" for="author"
+						>Författare<input
+							id="author"
+							list="review-authors"
+							required
+							maxlength="100"
+							bind:value={author}
+							class={inputClass}
+						/></label
+					>
+					{#key existingReview?.slug ?? ''}
+						<DrinkAmountFields bind:volumeMl bind:beerPriceKr={price} prefix="review-1" required>
+							<ContainerSelect
+								id="container"
+								suggested={isAutomatic('container', containerOverride, String(volumeMl)) &&
+									!!container}
+								value={container}
+								onchange={(value) => {
+									containerOverride = value || null;
+									loadedSources.container = undefined;
+									if (value !== 'Annan') customContainer = undefined;
+								}}
+								required
+								bind:customValue={customContainer}
+							/></DrinkAmountFields
+						>
+					{/key}
+					<RatingInputs
+						metrics={SODA_RATING_METRICS.filter(({ key }) => key === 'value')}
+						bind:values={sodaRatings}
+						prefix="soda"
+					/>
+					<fieldset class="space-y-3">
+						<legend class="font-semibold">Serveringsmetod (valfritt, välj flera)</legend>
+						<div class="flex flex-wrap gap-x-5 gap-y-2">
+							{#each SERVING_METHODS as method}
+								<label class="flex min-h-11 items-center gap-2"
+									><input
+										type="checkbox"
+										value={method}
+										bind:group={servingMethods}
+										class="size-5 accent-ember"
+									/>{method}</label
+								>
+							{/each}
+						</div>
+					</fieldset>
+					<div class="grid gap-5 sm:grid-cols-2">
+						<label for="serving-temperature"
+							>Serveringstemperatur (valfritt)
+							<select id="serving-temperature" bind:value={servingTemperature} class={inputClass}>
+								<option value={undefined}>Ej angiven</option>
+								{#each SERVING_TEMPERATURES as temperature}<option value={temperature}
+										>{temperature}</option
+									>{/each}
+							</select>
+						</label>
+						<AutomaticField
+							active={isAutomatic('ice', iceOverride, servingSource) && servedWithIce !== undefined}
+							field="Is"
+							kind="select"
+						>
+							<label for="served-with-ice"
+								>Is (valfritt)
+								<select
+									id="served-with-ice"
+									data-automatic={isAutomatic('ice', iceOverride, servingSource) &&
+										servedWithIce !== undefined}
+									aria-describedby={isAutomatic('ice', iceOverride, servingSource) &&
+									servedWithIce !== undefined
+										? 'automatic-field-help'
+										: undefined}
+									value={servedWithIce}
+									onchange={(event) => {
+										iceOverride =
+											event.currentTarget.value === 'true'
+												? true
+												: event.currentTarget.value === 'false'
+													? false
+													: null;
+										loadedSources.ice = undefined;
+									}}
+									class={inputClass}
+								>
+									<option value={undefined}>Ej angivet</option>
+									<option value={true}>Med is</option>
+									<option value={false}>Utan is</option>
+								</select>
+							</label>
+						</AutomaticField>
+					</div>
+					{#key nutritionVersion}
+						<NutrientInput
+							label="Koffein"
+							unit="mg"
+							prefix="caffeine"
+							required={isEnergyDrink}
+							{volumeMl}
+							bind:per100Ml={caffeineMgPer100Ml}
+							bind:perContainer={caffeineMgPerContainer}
+						/>
+						<NutrientInput
+							label="Kolhydrater"
+							unit="g"
+							prefix="carbohydrate"
+							{volumeMl}
+							bind:per100Ml={carbohydrateGPer100Ml}
+							bind:perContainer={carbohydrateGPerContainer}
+						/>
+						<NutrientInput
+							label="Protein"
+							unit="g"
+							prefix="protein"
+							{volumeMl}
+							bind:per100Ml={proteinGPer100Ml}
+							bind:perContainer={proteinGPerContainer}
+						/>
+					{/key}
+					<div role="group" aria-label="Dryckstyper" class="flex flex-wrap gap-x-6 gap-y-2">
+						<label class="inline-flex min-h-11 items-center gap-3 whitespace-nowrap"
+							><input
+								type="checkbox"
+								checked={isEnergyDrink}
+								data-automatic={isEnergyDrink &&
+									isAutomatic('energy', energyOverride, caffeineSource)}
+								aria-describedby={isEnergyDrink &&
+								isAutomatic('energy', energyOverride, caffeineSource)
+									? 'automatic-field-help'
+									: undefined}
+								onchange={(event) => {
+									energyOverride = event.currentTarget.checked;
+									loadedSources.energy = undefined;
+								}}
+								class="size-5 accent-ember"
+							/>Energidryck</label
+						>
+						<label class="inline-flex min-h-11 items-center gap-3 whitespace-nowrap"
+							><input
+								type="checkbox"
+								checked={isProteinDrink}
+								data-automatic={isProteinDrink &&
+									isAutomatic('protein', proteinOverride, proteinSource)}
+								aria-describedby={isProteinDrink &&
+								isAutomatic('protein', proteinOverride, proteinSource)
+									? 'automatic-field-help'
+									: undefined}
+								onchange={(event) => {
+									proteinOverride = event.currentTarget.checked;
+									loadedSources.protein = undefined;
+								}}
+								class="size-5 accent-ember"
+							/>Proteindryck</label
+						>
+						<label class="inline-flex min-h-11 items-center gap-3 whitespace-nowrap">
+							<input
+								type="checkbox"
+								checked={isElectrolyteDrink ?? false}
+								onchange={(event) => (isElectrolyteDrink = event.currentTarget.checked)}
+								class="size-5 accent-ember"
+							/>Elektrolytdryck
+						</label>
+					</div>
+					<AutomaticField
+						active={isAutomatic('sugar', sugarOverride, nutritionSource) && !!sugarType}
+						field="Socker"
+						kind="select"
+					>
+						<label class="block" for="sugar-type"
+							>Socker (valfritt)
+							<select
+								id="sugar-type"
+								data-automatic={isAutomatic('sugar', sugarOverride, nutritionSource) && !!sugarType}
+								aria-describedby={isAutomatic('sugar', sugarOverride, nutritionSource) &&
+								!!sugarType
+									? 'automatic-field-help'
+									: undefined}
+								value={sugarType ?? ''}
+								onchange={(event) => {
+									sugarOverride = event.currentTarget.value
+										? (event.currentTarget.value as ReviewContent['sugarType'])
+										: null;
+									loadedSources.sugar = undefined;
+								}}
+								class={inputClass}
+							>
+								<option value="">Ej angivet</option>
+								<option value="sugar-free">Sockerfri</option>
+								<option value="sugared">Sockrad</option>
+							</select>
+						</label>
+					</AutomaticField>
 					<button
 						type="button"
 						onclick={useAutomaticTypes}
 						class="text-sm text-accent underline underline-offset-4"
 						>Använd automatiska dryckstyper</button
 					>
-				{/if}
-				<label class="block" for="author"
-					>Författare<input
-						id="author"
-						required
-						maxlength="100"
-						bind:value={author}
-						class={inputClass}
-					/></label
-				>
-				<label class="block" for="slug"
-					>Slug / filnamn<input
-						id="slug"
-						readonly={!!existingReview}
-						maxlength="160"
-						bind:value={customSlug}
-						placeholder={suggestedSlug || 'hallonsoda-anton'}
-						class={inputClass}
-						aria-describedby="slug-help"
-					/></label
-				>
-				<p id="slug-help" class="text-sm text-muted">
-					Lämna tomt för att skapa från läskens namn och författaren. Filnamn: {slug ||
-						'hallonsoda'}.json. Använd en unik slug för varje recension. Recensioner av samma läsk
-					sparas som egna JSON-filer.
-				</p>
-			</section>
-			<section class={panelClass} data-step="1" hidden={wizard && step !== 1}>
-				<h2 tabindex="-1" class="text-xl font-semibold">Läskbetyg</h2>
-				<div
-					role="status"
-					aria-label="Förhandsvisning av totalbetyg"
-					aria-live="polite"
-					aria-atomic="true"
-					class="rounded-2xl border border-accent/30 bg-surface-raised p-5"
-				>
-					<p class="text-sm font-semibold text-secondary">Recensionens totalbetyg</p>
-					{#if previewScore !== undefined}
-						<p class="mt-2 text-4xl font-bold text-accent">{previewRating}/3</p>
-						<p class="mt-2 text-sm text-secondary">
-							Viktad poäng: {previewScore.toLocaleString('sv-SE', { maximumFractionDigits: 2 })}/5
+					<details class="space-y-5">
+						<summary>Stället (valfritt)</summary>
+						<label class="block" for="location"
+							>Plats / adress<input
+								id="location"
+								maxlength="300"
+								bind:value={location}
+								class={inputClass}
+							/></label
+						>
+						<label class="flex items-center gap-3"
+							><input
+								type="checkbox"
+								bind:checked={rateVenue}
+								class="size-5 accent-ember"
+							/>Betygsätt stället också</label
+						>
+						<p class="text-sm text-muted">
+							Platsbetygen visas separat och påverkar inte läskens helhetsbetyg.
 						</p>
-					{:else}
-						<p class="mt-2 text-sm text-secondary">
-							Fyll i alla läskbetyg med heltal mellan 0 och 5 för att se totalbetyget.
-						</p>
-					{/if}
-					<p class="mt-2 text-sm text-muted">
-						Uppdateras när du ändrar delbetygen. Platsbetygen påverkar inte totalbetyget.
-					</p>
-				</div>
-
-				<RatingInputs metrics={SODA_RATING_METRICS} bind:values={sodaRatings} prefix="soda" />
-			</section>
-			<section class={panelClass} data-step="2" hidden={wizard && step !== 2}>
-				<h2 tabindex="-1" class="text-xl font-semibold">Din recension</h2>
-				{#key existingReview?.slug ?? ''}
-					<ContainerSelect
-						id="container"
-						bind:value={container}
-						bind:customValue={customContainer}
-					/>
-					<DrinkAmountFields
-						bind:volumeMl
-						bind:beerPriceKr={price}
-						prefix="review-1"
-						ruler={wizard && step === 2}
-					/>
-				{/key}
-				<label class="flex items-center gap-3"
-					><input type="checkbox" bind:checked={favorite} class="size-5 accent-ember" />Jag väljer
-					den här läsken som en läskfavorit</label
-				>
-				<p class="text-sm text-muted">
-					En läskfavorit är en läsk du aktivt väljer framför andra, inte bara tycker är värd att
-					prova.
-				</p>
-				<label class="block" for="repurchase-potential">
-					Återköpspotential (valfritt)
-					<select
-						id="repurchase-potential"
-						bind:value={repurchasePotential}
-						class={inputClass}
-						aria-describedby="repurchase-potential-help"
-					>
-						<option value={undefined}>Ej angiven</option>
-						{#each REPURCHASE_POTENTIAL_LABELS as label, score}
-							<option value={score}>{score}/5 – {label}</option>
-						{/each}
-					</select>
-				</label>
-				<p id="repurchase-potential-help" class="text-sm text-muted">
-					Hur gärna köper du läsken igen? Påverkar inte helhetsbetyget.
-				</p>
-				<label class="block" for="description"
-					>Fri text<textarea
-						id="description"
-						rows="8"
-						required
-						maxlength="50000"
-						bind:value={description}
-						class={inputClass}
-						placeholder="Beskriv smaken och din upplevelse…"
-					></textarea></label
-				>
-				<p class="text-sm text-muted">Markdown för rubriker, listor och fetstil går bra.</p>
-				<label class="block" for="image"
-					>Bild till recensionen<input
-						id="image"
-						type="file"
-						accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-						onchange={selectImage}
-						class={inputClass}
-					/></label
-				>
-				<p class="text-sm text-muted">
-					Välj en JPEG-, PNG-, WebP-, HEIC- eller HEIF-bild på högst 10 MiB. Bilden roteras, skalas
-					till högst 1 600 pixlar och komprimeras till WebP på högst 500 KiB. Originalets metadata,
-					inklusive GPS-position, tas bort.
-				</p>
-				{#if imageBusy}<p role="status">Behandlar bilden…</p>{/if}
-				{#if imageError}<p role="alert" class="text-accent">{imageError}</p>{/if}
-				{#if image}<p class="text-sm text-muted">
-						Komprimerad bild: {Math.ceil(image.size / 1024)} KiB (WebP).
-					</p>{/if}
-				{#if importedReview && !previewSrc}<p class="text-sm text-muted">
-						Välj bilden {importedReview.image} för att förhandsvisa den. Du kan behålla bildens filnamn
-						när du laddar ner JSON-filen utan att välja en ny bild.
-					</p>{/if}
-				{#if previewSrc}
-					<div class="space-y-4">
-						<h3 class="font-semibold text-ink">Så visas bilden i recensionen</h3>
-						<ImagePositionEditor
-							src={previewSrc}
-							bind:focusX={imageFocusX}
-							bind:focusY={imageFocusY}
-							zoom={imageZoom}
-						/>
-						<p id="image-position-help" class="text-sm text-muted">
-							Dra bilden för att justera utsnittet som visas i recensionen och på recensionskortet.
-							Du kan också använda piltangenterna när bilden är markerad, och hålla Skift för större
-							steg. Zooma för att kunna flytta bilden mer. Originalbilden behålls.
-						</p>
-						<label class="block" for="image-zoom">
-							Zoom: {Math.round(imageZoom * 100)} %
+						{#if rateVenue}<RatingInputs
+								metrics={VENUE_RATING_METRICS}
+								bind:values={venueRatings}
+								prefix="venue"
+							/>{/if}
+						<details>
+							<summary class="cursor-pointer text-secondary"
+								>Koordinater för kartan (valfritt)</summary
+							>
+							<p class="mt-3 text-sm text-muted">
+								Ange båda koordinaterna manuellt för att visa platsen på kartan.
+							</p>
+							<div class="mt-4 grid gap-5 sm:grid-cols-2">
+								<label for="latitude"
+									>Latitud<input
+										id="latitude"
+										type="number"
+										min="-90"
+										max="90"
+										step="any"
+										bind:value={() => latitude, (value) => (latitude = value ?? undefined)}
+										class={inputClass}
+									/></label
+								><label for="longitude"
+									>Longitud<input
+										id="longitude"
+										type="number"
+										min="-180"
+										max="180"
+										step="any"
+										bind:value={() => longitude, (value) => (longitude = value ?? undefined)}
+										class={inputClass}
+									/></label
+								>
+							</div>
+						</details>
+					</details>
+					<details class="space-y-5">
+						<summary>Avancerade inställningar</summary>
+						<label class="block" for="soda-id"
+							>Läsk-ID (automatiskt)
 							<input
-								id="image-zoom"
-								type="range"
-								min="1"
-								max="3"
-								step="0.05"
-								bind:value={imageZoom}
-								aria-describedby="image-position-help"
-								class="mt-2 block w-full accent-ember"
+								id="soda-id"
+								maxlength="100"
+								value={sodaId || suggestedSodaId}
+								oninput={(event) => (sodaId = event.currentTarget.value)}
+								class={inputClass}
+								placeholder="Till exempel pepsi-max-tropical"
+								aria-describedby="soda-id-help soda-id-preview"
 							/>
 						</label>
-						<button
-							type="button"
-							class="rounded-full border border-line px-4 py-2 text-sm text-secondary"
-							onclick={() => {
-								imageFocusX = 50;
-								imageFocusY = 50;
-							}}>Centrera bilden</button
-						>
-						<button
-							type="button"
-							class="rounded-full border border-line px-4 py-2 text-sm text-secondary"
-							onclick={() => {
-								imageZoom = 1;
-								imageFocusX = 50;
-								imageFocusY = 50;
-							}}>Återställ utsnitt</button
-						>
-					</div>
-				{/if}
-			</section>
-			<section class={panelClass} data-step="3" hidden={wizard && step !== 3}>
-				<h2 tabindex="-1" class="text-xl font-semibold">Stället (valfritt)</h2>
-				<label class="block" for="location"
-					>Plats / adress<input
-						id="location"
-						maxlength="300"
-						bind:value={location}
-						class={inputClass}
-					/></label
-				>
-				<label class="flex items-center gap-3"
-					><input type="checkbox" bind:checked={rateVenue} class="size-5 accent-ember" />Betygsätt
-					stället också</label
-				>
-				<p class="text-sm text-muted">
-					Platsbetygen visas separat och påverkar inte läskens helhetsbetyg.
-				</p>
-				{#if rateVenue}<RatingInputs
-						metrics={VENUE_RATING_METRICS}
-						bind:values={venueRatings}
-						prefix="venue"
-					/>{/if}
-				<details>
-					<summary class="cursor-pointer text-secondary">Koordinater för kartan (valfritt)</summary>
-					<p class="mt-3 text-sm text-muted">
-						Ange båda koordinaterna manuellt för att visa platsen på kartan.
-					</p>
-					<div class="mt-4 grid gap-5 sm:grid-cols-2">
-						<label for="latitude"
-							>Latitud<input
-								id="latitude"
-								type="number"
-								min="-90"
-								max="90"
-								step="any"
-								bind:value={latitude}
+						<p id="soda-id-help" class="text-sm text-muted">
+							Lämna tomt för automatiskt läsk-ID. Använd samma ID för recensioner av samma läsk.
+						</p>
+						<p id="soda-id-preview" class="text-sm text-secondary" aria-live="polite">
+							{#if normalizedSodaId}Läsk-ID som sparas: <span class="font-semibold text-ink"
+									>{normalizedSodaId}</span
+								>
+							{:else if sodaId.trim()}Ange ett läsknamn eller ID med minst en bokstav a–z eller
+								siffra.
+							{:else}ID skapas när du anger läskens namn.{/if}
+						</p>
+						<label class="block" for="slug"
+							>Slug / filnamn<input
+								id="slug"
+								readonly={!!existingReview}
+								maxlength="160"
+								bind:value={customSlug}
+								placeholder={suggestedSlug || 'hallonsoda-anton'}
 								class={inputClass}
-							/></label
-						><label for="longitude"
-							>Longitud<input
-								id="longitude"
-								type="number"
-								min="-180"
-								max="180"
-								step="any"
-								bind:value={longitude}
-								class={inputClass}
+								aria-describedby="slug-help"
 							/></label
 						>
+						<p id="slug-help" class="text-sm text-muted">
+							Lämna tomt för automatiskt filnamn: {slug || 'hallonsoda-anton'}.json.
+						</p>
+					</details>
+					<datalist id="review-brands"
+						>{#each brands as name}<option value={name}></option>{/each}</datalist
+					>
+					<datalist id="review-authors"
+						>{#each authors as name}<option value={name}></option>{/each}</datalist
+					>
+					<button
+						type="button"
+						class="btn btn-secondary"
+						onclick={() => {
+							loadedSources = {};
+							brandOverride = undefined;
+							containerOverride = undefined;
+							customContainer = undefined;
+							iceOverride = undefined;
+							useAutomaticTypes();
+						}}>Återställ automatiska förslag</button
+					>
+				</section>
+				<section class={sectionClass} data-step="3" hidden={wizard && step !== 3}>
+					<h2 tabindex="-1" class="scroll-mt-32 text-xl font-semibold">Skicka recension</h2>
+					<div class="grid gap-3 sm:grid-cols-3">
+						<button type="button" class="btn btn-secondary" onclick={() => goToStep(0)}
+							>Ändra bild</button
+						>
+						<button type="button" class="btn btn-secondary" onclick={() => goToStep(1)}
+							>Ändra smak · Återköpspotential {repurchasePotential ?? '–'}/5</button
+						>
+						<button type="button" class="btn btn-secondary" onclick={() => goToStep(2)}
+							>Ändra data · {title || 'Namn saknas'} · {author} · {volumeMl ?? '–'} ml · {container ??
+								'Förpackning saknas'} · {price ?? '–'} kr</button
+						>
 					</div>
-				</details>
-			</section>
-			<section class={panelClass} data-step="4" hidden={wizard && step !== 4}>
-				<h2 tabindex="-1" class="text-xl font-semibold">Skicka recension</h2>
-				<p class="text-secondary">
-					Skicka recensionen och bilden till GitHub som en pull request. Efter granskning och merge
-					publiceras recensionen automatiskt.
-				</p>
-				{#if githubAccount}
-					<p>Ansluten som <strong>{githubAccount}</strong>.</p>
-					<button type="button" class="btn btn-secondary" onclick={disconnectGitHub}
-						>Koppla från</button
-					>
-				{:else}
-					<label for="github-token"
-						>GitHub-token
-						<input
-							id="github-token"
-							type="password"
-							bind:value={token}
-							autocomplete="off"
-							spellcheck="false"
-							class={inputClass}
-						/>
-					</label>
-					<p class="text-secondary text-sm">
-						Token används bara under detta besök och sparas inte. Använd en repositorybegränsad
-						token med Contents och Pull requests: läs och skriv.
-					</p>
-					<button
-						type="button"
-						class="btn btn-secondary"
-						disabled={!token.trim() || connecting}
-						onclick={connectGitHub}>{connecting ? 'Ansluter…' : 'Anslut till GitHub'}</button
-					>
-				{/if}
-				{#if githubAccount && existingReview}
-					<p class="text-sm text-secondary">
-						Ladda ner dina ändringar först. Inläsning från GitHub ersätter formulärets innehåll.
-					</p>
-					<button type="button" class="btn btn-secondary" onclick={reloadGitHubReview}
-						>Ladda aktuell recension från GitHub</button
-					>
-				{/if}
-				{#if githubError}<p role="alert" class="text-accent">{githubError}</p>{/if}
-				{#if publicationProgress && (publishing || publicationMatchesForm)}<p
-						role="status"
-						class="text-secondary"
-					>
-						{publicationProgress}
-					</p>{/if}
-				{#if publicationUrl && publicationMatchesForm}<a
-						class="btn btn-secondary"
-						href={publicationUrl}
-						target="_blank"
-						rel="noopener noreferrer">Öppna PR</a
-					>{/if}
-				{#if comparisonUrl && !publicationUrl && publicationMatchesForm}<a
-						class="btn btn-secondary"
-						href={comparisonUrl}
-						target="_blank"
-						rel="noopener noreferrer">Öppna grenen på GitHub</a
-					>
-					<p class="text-secondary">
-						Försök skicka igen för att återanvända samma gren, eller öppna länken för att skapa PR
-						på GitHub.
-					</p>{/if}
-
-				{#if error}<p role="alert" class="text-accent">{error}</p>{/if}
-				{#if notice}<p role="status" class="text-secondary">{notice}</p>{/if}
-				<div class="flex flex-wrap gap-3">
-					<button
-						type="submit"
-						name="action"
-						value="github"
-						disabled={imageBusy || publishing || !githubAccount}
-						class="btn btn-primary">{publishing ? 'Skickar…' : 'Skicka som PR'}</button
-					>
-					<button
-						type="submit"
-						name="action"
-						value="download"
-						disabled={imageBusy}
-						class="btn btn-secondary">Ladda ner JSON</button
-					><button
-						type="button"
-						disabled={!image || imageBusy || !slug}
-						onclick={() => image && download(image, imageName)}
-						class="rounded-full border border-line px-5 py-3 font-semibold disabled:opacity-50"
-						>Ladda ner bild</button
-					>
-				</div>
-				<p class="text-secondary text-sm">
-					Du kan också ladda ner filerna utan GitHub-token. Lägg JSON i <code>content/reviews/</code
-					>
-					och bilden i <code>content/reviews/images/</code> för manuell publicering.
-				</p>
-			</section>
-			{#if wizard}
-				<div class="flex items-center justify-between gap-3">
-					<button
-						type="button"
-						disabled={step === 0}
-						onclick={() => goToStep(step - 1)}
-						class="btn btn-secondary">Föregående</button
-					>
-					{#if step < steps.length - 1}<button
-							type="button"
-							onclick={nextStep}
-							class="btn btn-primary">Nästa</button
+					{#if githubAccount}
+						<p>Ansluten som <strong>{githubAccount}</strong>.</p>
+						<button type="button" class="btn btn-secondary" onclick={disconnectGitHub}
+							>Koppla från</button
+						>
+					{:else}
+						<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+							<label for="github-token" class="block min-w-0"
+								>GitHub-token
+								<input
+									id="github-token"
+									type="password"
+									bind:value={token}
+									autocomplete="off"
+									spellcheck="false"
+									class={inputClass}
+								/>
+							</label>
+							<button
+								type="button"
+								class="btn btn-secondary justify-self-start"
+								disabled={!token.trim() || connecting}
+								onclick={connectGitHub}>{connecting ? 'Ansluter…' : 'Anslut till GitHub'}</button
+							>
+						</div>
+					{/if}
+					{#if githubAccount && existingReview}
+						<p class="text-sm text-secondary">
+							Ladda ner dina ändringar först. Inläsning från GitHub ersätter formulärets innehåll.
+						</p>
+						<button type="button" class="btn btn-secondary" onclick={reloadGitHubReview}
+							>Ladda aktuell recension från GitHub</button
+						>
+					{/if}
+					{#if githubError}<p role="alert" class="text-accent">{githubError}</p>{/if}
+					{#if publicationProgress && (publishing || publicationMatchesForm)}<p
+							role="status"
+							class="text-secondary"
+						>
+							{publicationProgress}
+						</p>{/if}
+					{#if publicationUrl && publicationMatchesForm}<a
+							class="btn btn-secondary"
+							href={publicationUrl}
+							target="_blank"
+							rel="noopener noreferrer">Öppna PR</a
 						>{/if}
-				</div>
-			{/if}
+					{#if comparisonUrl && !publicationUrl && publicationMatchesForm}<a
+							class="btn btn-secondary"
+							href={comparisonUrl}
+							target="_blank"
+							rel="noopener noreferrer">Öppna grenen på GitHub</a
+						>
+						<p class="text-secondary">
+							Försök skicka igen för att återanvända samma gren, eller öppna länken för att skapa PR
+							på GitHub.
+						</p>{/if}
+					{#if error}<p role="alert" class="text-accent">{error}</p>{/if}
+					{#if notice}<p role="status" class="text-secondary">{notice}</p>{/if}
+					<div class="flex flex-wrap gap-3">
+						<button
+							type="submit"
+							name="action"
+							value="github"
+							disabled={imageBusy || publishing || !githubAccount}
+							class="btn btn-primary">{publishing ? 'Skickar…' : 'Skicka som PR'}</button
+						>
+						<button
+							type="submit"
+							name="action"
+							value="download"
+							disabled={imageBusy}
+							class="btn btn-secondary">Ladda ner JSON</button
+						><button
+							type="button"
+							disabled={!image || imageBusy || !slug}
+							onclick={() => image && download(image, imageName)}
+							class="rounded-full border border-line px-5 py-3 font-semibold disabled:opacity-50"
+							>Ladda ner bild</button
+						>
+					</div>
+					<details class="space-y-3 text-sm text-muted">
+						<summary class="cursor-pointer">Hjälp med publicering</summary>
+						<p class="text-secondary">
+							Skicka recensionen och bilden till GitHub som en pull request. Efter granskning och
+							merge publiceras recensionen automatiskt.
+						</p>
+						<p class="text-secondary text-sm">
+							Token används bara under detta besök och sparas inte. Använd en repositorybegränsad
+							token med Contents och Pull requests: läs och skriv.
+						</p>
+						<p class="text-secondary text-sm">
+							Du kan också ladda ner filerna utan GitHub-token. Lägg JSON i <code
+								>content/reviews/</code
+							>
+							och bilden i <code>content/reviews/images/</code> för manuell publicering.
+						</p>
+					</details>
+				</section>
+				{#if wizard}
+					<div
+						class="sticky bottom-0 z-20 flex justify-end gap-2 rounded-b-3xl border-t border-line bg-surface/95 px-5 py-4 backdrop-blur sm:px-7"
+					>
+						{#if step > 0}<button
+								type="button"
+								onclick={() => goToStep(step - 1)}
+								class="btn btn-secondary"
+								><ArrowLeft size={16} aria-hidden="true" />Föregående</button
+							>{/if}
+						{#if step < steps.length - 1}<button
+								type="button"
+								onclick={nextStep}
+								class="btn btn-primary">Nästa<ArrowRight size={16} aria-hidden="true" /></button
+							>{/if}
+					</div>
+				{/if}
+			</div>
 		</fieldset>
 	</form>
 </section>

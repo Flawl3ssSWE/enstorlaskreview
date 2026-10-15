@@ -118,7 +118,7 @@ export const DRINK_CONTAINERS = [
 ] as const;
 
 export const DRINK_VOLUMES_ML = [
-	200, 250, 300, 330, 355, 400, 500, 600, 750, 1000, 1250, 1500, 2000
+	200, 250, 300, 330, 355, 400, 500, 600, 750, 800, 1000, 1250, 1500, 2000
 ] as const;
 
 /** Separate personal assessment; never included in the overall soda score. */

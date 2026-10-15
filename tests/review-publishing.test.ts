@@ -1,3 +1,4 @@
+import { openEditorTools } from './review-editor-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import fixture from './fixtures/content/testsoda.json' with { type: 'json' };
@@ -98,15 +99,22 @@ async function mockGitHub(
 
 async function fillReview(page: Page, wizard: boolean) {
 	await page.goto(wizard ? 'skapa/wizard/' : 'skapa/');
-	await page.getByLabel('Läskens namn / rubrik').fill('Publicerad testläsk');
-	await page.getByLabel('Författare', { exact: true }).fill('Test');
-	if (wizard) await page.getByRole('button', { name: '3. Din recension', exact: true }).click();
-	await page.getByLabel('Fri text').fill('Frisk läsk med **tydlig smak**.');
+	await openEditorTools(page);
+	if (!wizard)
+		await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
 	await page
 		.getByLabel('Bild till recensionen')
 		.setInputFiles('tests/fixtures/images/test-bar.png');
 	await expect(page.getByText('Komprimerad bild:')).toBeVisible();
-	if (wizard) await page.getByRole('button', { name: '5. Skicka recension', exact: true }).click();
+	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+	await page.getByLabel('Fri text').fill('Frisk läsk med **tydlig smak**.');
+	await page.locator('#repurchase-potential').selectOption('3');
+	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+	await page.getByLabel('Läskens namn / rubrik').fill('Publicerad testläsk');
+	await page.getByLabel('Författare', { exact: true }).fill('Test');
+	await page.locator('#review-1-volume').selectOption('330');
+	await page.locator('#review-1-price').fill('20');
+	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 }
 
 async function connect(page: Page) {
@@ -148,8 +156,7 @@ for (const wizard of [false, true]) {
 		await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
 		expect(await readFile((await (await downloaded).path())!, 'utf8')).not.toContain(token);
 		await page.reload();
-		if (wizard)
-			await page.getByRole('button', { name: '5. Skicka recension', exact: true }).click();
+		await page.getByRole('button', { name: '4. Skicka recension', exact: true }).click();
 		await expect(page.getByLabel('GitHub-token', { exact: true })).toHaveValue('');
 		expect(errors).toEqual([]);
 	});
@@ -201,6 +208,10 @@ test('invalid credentials leave downloads available', async ({ page }) => {
 test('published edits retain images and stale edits are blocked', async ({ page }) => {
 	const writes = await mockGitHub(page, { stale: true, executable: true });
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
 	await page.getByLabel('Fri text').fill('Min ändring');
 	await connect(page);
@@ -222,10 +233,10 @@ for (const wizard of [false, true]) {
 		await page.getByRole('button', { name: 'Skicka som PR', exact: true }).click();
 		const link = page.getByRole('link', { name: 'Öppna PR', exact: true });
 		await expect(link).toBeVisible();
-		if (wizard) await page.getByRole('button', { name: '1. Om läsken', exact: true }).click();
+		if (wizard) await page.getByRole('button', { name: '3. Data', exact: true }).click();
 		await page.getByLabel('Läskens namn / rubrik').fill('Annan läsk');
 		if (wizard)
-			await page.getByRole('button', { name: '5. Skicka recension', exact: true }).click();
+			await page.getByRole('button', { name: '4. Skicka recension', exact: true }).click();
 		await expect(link).toHaveCount(0);
 		await expect(page.getByText('Din PR är klar.', { exact: false })).toHaveCount(0);
 		await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
@@ -239,6 +250,10 @@ test('imports and reloads a current GitHub review before deployment without losi
 }) => {
 	const writes = await mockGitHub(page, { stale: true });
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page.getByLabel('Recensionens JSON-fil').setInputFiles({
 		name: 'testsoda.json',
 		mimeType: 'application/json',
@@ -266,3 +281,25 @@ test('imports and reloads a current GitHub review before deployment without losi
 		image: fixture.image
 	});
 });
+
+for (const wizard of [false, true]) {
+	test(`${wizard ? 'wizard' : 'full form'} blocks PR writes without repurchase potential`, async ({
+		page
+	}) => {
+		const writes = await mockGitHub(page);
+		await fillReview(page, wizard);
+		if (wizard) await page.getByRole('button', { name: '2. Smak', exact: true }).click();
+		await page.locator('#repurchase-potential').selectOption('');
+		if (wizard)
+			await page.getByRole('button', { name: '4. Skicka recension', exact: true }).click();
+		await connect(page);
+		await page.getByRole('button', { name: 'Skicka som PR', exact: true }).click();
+		await expect(page.locator('#repurchase-potential')).toBeFocused();
+		expect(writes).toHaveLength(0);
+		await page.locator('#repurchase-potential').selectOption('5');
+		if (wizard)
+			await page.getByRole('button', { name: '4. Skicka recension', exact: true }).click();
+		await page.getByRole('button', { name: 'Skicka som PR', exact: true }).click();
+		await expect(page.getByRole('link', { name: 'Öppna PR', exact: true })).toBeVisible();
+	});
+}

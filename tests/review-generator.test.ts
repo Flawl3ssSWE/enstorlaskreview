@@ -1,3 +1,4 @@
+import { openEditorTools } from './review-editor-helpers';
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { format, resolveConfig } from 'prettier';
@@ -22,9 +23,16 @@ async function forceWebpFallback(page: import('@playwright/test').Page) {
 
 async function fillReview(page: import('@playwright/test').Page) {
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page.getByLabel('Läskens namn / rubrik').fill('Ny hallonsoda');
 	await page.getByLabel('Författare', { exact: true }).fill('Test');
 	await page.getByLabel('Fri text').fill('**Frisk** och lättdrucken.');
+	await page.locator('#review-1-volume').selectOption('330');
+	await page.locator('#review-1-price').fill('20');
+	await page.locator('#repurchase-potential').selectOption('3');
 	await page
 		.getByLabel('Bild till recensionen')
 		.setInputFiles('tests/fixtures/images/test-bar.png');
@@ -52,18 +60,16 @@ test('generator downloads one flat review with one price and a separate compress
 }) => {
 	await fillReview(page);
 	await expect(page).toHaveURL(new RegExp(`${basePath}/skapa/`));
-	await expect(
-		page.getByRole('textbox', { name: 'Pris i kronor (valfritt)', exact: true })
-	).toHaveCount(1);
+	await expect(page.getByRole('textbox', { name: 'Pris i kronor', exact: true })).toHaveCount(1);
 	await expect(page.getByRole('button', { name: 'Lägg till recensent' })).toHaveCount(0);
 	await expect(page.locator('#container option')).toHaveText(['Ej angiven', ...DRINK_CONTAINERS]);
 	expect(await page.locator('#review-1-volume option').count()).toBe(DRINK_VOLUMES_ML.length + 2);
 	await page.locator('#container').selectOption('Burk');
 	await page.locator('#review-1-volume').selectOption('330');
 	await page.getByRole('checkbox', { name: 'Originalförpackning', exact: true }).check();
-	await page.getByLabel('Pris i kronor (valfritt)', { exact: true }).fill('25');
+	await page.getByLabel('Pris i kronor', { exact: true }).fill('25');
 	await page.getByRole('checkbox', { name: /läskfavorit/ }).check();
-	await page.getByLabel('Återköpspotential (valfritt)').selectOption('0');
+	await page.getByLabel('Återköpspotential').selectOption('0');
 	await page.getByLabel('Betygsätt stället också').check();
 	for (const metric of SODA_RATING_METRICS)
 		await page.locator(`#soda-${metric.key}`).fill(metric.key === 'sweetness' ? '3' : '5');
@@ -87,14 +93,9 @@ test('generator downloads one flat review with one price and a separate compress
 	expect(json).not.toHaveProperty('rating');
 	expect(json).not.toHaveProperty('quality');
 	expect(json).not.toHaveProperty('recommended');
-	await page.getByLabel('Återköpspotential (valfritt)').selectOption({ label: 'Ej angiven' });
 	await page.getByLabel('Betygsätt stället också').uncheck();
-	await page.locator('#container').selectOption({ label: 'Ej angiven' });
-	await expect(page.locator('#review-1-volume')).toHaveValue('330');
-	await page.locator('#review-1-volume').selectOption({ label: 'Ej angiven' });
 	const sodaOnly = (await exportJson(page)).json;
-	for (const field of ['venueRatings', 'container', 'volumeMl', 'repurchasePotential'])
-		expect(sodaOnly).not.toHaveProperty(field);
+	expect(sodaOnly).not.toHaveProperty('venueRatings');
 	const imagePromise = page.waitForEvent('download');
 	await page.getByRole('button', { name: 'Ladda ner bild' }).click();
 	const image = await imagePromise;
@@ -217,6 +218,10 @@ for (const name of ['photo.HEIC', 'photo.heif', 'fallback.HEIC']) {
 
 test('invalid HEIC reports a Swedish error and allows choosing another image', async ({ page }) => {
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page.getByLabel('Bild till recensionen').setInputFiles({
 		name: 'broken.heic',
 		mimeType: 'image/heic',
@@ -236,6 +241,10 @@ test('invalid HEIC reports a Swedish error and allows choosing another image', a
 
 test('replacing a PNG uses a new WebP filename in the edited JSON', async ({ page }) => {
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
 	await page
 		.getByLabel('Bild till recensionen')
@@ -397,6 +406,10 @@ test('JSON import loads an existing review and exports its edits with stable ide
 	page
 }) => {
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	const chooserPromise = page.waitForEvent('filechooser');
 	await page.getByRole('button', { name: 'Ladda in recension från JSON' }).click();
 	await (await chooserPromise).setFiles('tests/fixtures/content/testsoda.json');
@@ -413,7 +426,7 @@ test('JSON import loads an existing review and exports its edits with stable ide
 		'25% 75%'
 	);
 	await page.getByLabel('Fri text').fill('Uppdaterad recension.');
-	await page.getByLabel('Pris i kronor (valfritt)', { exact: true }).fill('22,5');
+	await page.getByLabel('Pris i kronor', { exact: true }).fill('22,5');
 	const { json, filename } = await exportJson(page);
 	expect(filename).toBe('testsoda.json');
 	expect(json).toMatchObject({
@@ -435,6 +448,10 @@ test('JSON import loads an existing review and exports its edits with stable ide
 
 test('JSON import supports a saved review outside the published collection', async ({ page }) => {
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	const source = JSON.parse(await readFile('tests/fixtures/content/testsoda.json', 'utf8'));
 	const saved = {
 		...source,
@@ -560,6 +577,10 @@ test('reviews of the same soda have separate pages, cards and reviewer filters',
 
 test('editing keeps the existing review slug, image and creation date', async ({ page }) => {
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page
 		.getByRole('combobox', { name: 'Redigera en befintlig recension' })
 		.selectOption('testsoda');
@@ -568,9 +589,9 @@ test('editing keeps the existing review slug, image and creation date', async ({
 	await expect(page.getByLabel('Slug / filnamn')).toHaveAttribute('readonly', '');
 	await expect(page.locator('#container')).toHaveValue('Burk');
 	await expect(page.locator('#review-1-volume')).toHaveValue('330');
-	await expect(page.getByLabel('Återköpspotential (valfritt)')).toHaveValue('5');
+	await expect(page.getByLabel('Återköpspotential')).toHaveValue('5');
 	await expect(page.getByRole('checkbox', { name: /läskfavorit/ })).toBeChecked();
-	await page.getByLabel('Pris i kronor (valfritt)', { exact: true }).fill('27');
+	await page.getByLabel('Pris i kronor', { exact: true }).fill('27');
 	const { json, filename } = await exportJson(page);
 	expect(filename).toBe('testsoda.json');
 	expect(json).toMatchObject({
@@ -587,7 +608,7 @@ test('editing keeps the existing review slug, image and creation date', async ({
 		.getByRole('combobox', { name: 'Redigera en befintlig recension' })
 		.selectOption('hallonsoda');
 	await expect(page.locator('#venue-atmosphere')).toHaveValue('1');
-	await expect(page.getByLabel('Återköpspotential (valfritt)')).toHaveValue('');
+	await expect(page.getByLabel('Återköpspotential')).toHaveValue('');
 	await expect(page.getByRole('checkbox', { name: /läskfavorit/ })).not.toBeChecked();
 	await page.getByRole('combobox', { name: 'Redigera en befintlig recension' }).selectOption('');
 	await expect(page.locator('#container')).toHaveValue('');
@@ -618,7 +639,7 @@ test('generator exports energy drink facts with the review price', async ({ page
 	await page.getByLabel('Koffein i mg/100 ml').fill('32');
 	await page.locator('#container').selectOption('Sprutmaskin');
 	await page.locator('#review-1-volume').selectOption('400');
-	await page.getByLabel('Pris i kronor (valfritt)', { exact: true }).fill('20');
+	await page.getByLabel('Pris i kronor', { exact: true }).fill('20');
 	const { json } = await exportJson(page);
 	expect(json).toMatchObject({
 		isEnergyDrink: true,
@@ -634,12 +655,17 @@ test('custom packaging and volume remain editable in an independent review', asy
 	await expect(page.getByText('Volym: 27,5 cl', { exact: true })).toBeVisible();
 	await expect(page.getByText('LPK (läsk per krona): 1,38 cl/kr', { exact: true })).toBeVisible();
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page
 		.getByRole('combobox', { name: 'Redigera en befintlig recension' })
 		.selectOption('egen-forpackning');
 	await expect(page.getByLabel('Egen förpackning', { exact: true })).toHaveValue('Pappmugg');
 	await expect(page.locator('#review-1-volume')).toHaveValue('custom');
 	await expect(page.getByLabel('Egen volym i ml', { exact: true })).toHaveValue('275');
+	await page.locator('#repurchase-potential').selectOption('3');
 	await page.getByLabel('Egen förpackning', { exact: true }).fill(' Termosmugg ');
 	await page.getByLabel('Egen volym i ml', { exact: true }).fill('473.5');
 	const { json } = await exportJson(page);
@@ -663,12 +689,12 @@ test('different reviewers create separate JSON files for the same soda', async (
 	await expect(page.getByLabel('Läsk-ID (automatiskt)', { exact: true })).toHaveValue(
 		'ny-hallonsoda'
 	);
-	await page.getByLabel('Pris i kronor (valfritt)', { exact: true }).fill('20');
+	await page.getByLabel('Pris i kronor', { exact: true }).fill('20');
 	await page.locator('#review-1-volume').selectOption('330');
 	const first = await exportJson(page);
 	await page.getByLabel('Författare', { exact: true }).fill('Robin');
 	await page.getByLabel('Fri text').fill('En annan upplevelse.');
-	await page.getByLabel('Pris i kronor (valfritt)', { exact: true }).fill('30');
+	await page.getByLabel('Pris i kronor', { exact: true }).fill('30');
 	await page.locator('#review-1-volume').selectOption('500');
 	await page.locator('#soda-taste').fill('0');
 	const second = await exportJson(page);
@@ -722,10 +748,10 @@ test('generator selects an existing soda and preserves links when editing', asyn
 	await expect(page.getByLabel('Läskens namn / rubrik')).toHaveValue('Testläsk');
 	await expect(page.getByLabel('Läsk-ID (automatiskt)', { exact: true })).toHaveValue('testlask');
 	await expect(page.getByLabel('Författare', { exact: true })).toHaveValue('Test');
-	await expect(page.getByLabel('Pris i kronor (valfritt)', { exact: true })).toHaveValue('');
+	await expect(page.getByLabel('Pris i kronor', { exact: true })).toHaveValue('20');
 	const created = await exportJson(page);
 	expect(created.json).toMatchObject({ sodaId: 'testlask', slug: 'testlask-test', author: 'Test' });
-	expect(created.json).not.toHaveProperty('beerPriceKr');
+	expect(created.json.beerPriceKr).toBe(20);
 	await page
 		.getByRole('combobox', { name: 'Redigera en befintlig recension' })
 		.selectOption('testsoda');
@@ -811,16 +837,22 @@ test('generator formats entered soda names into a previewed valid soda ID', asyn
 test('generator accepts one decimal in prices with a comma or period', async ({ page }) => {
 	await fillReview(page);
 	await page.locator('#review-1-volume').selectOption('330');
-	const price = page.getByLabel('Pris i kronor (valfritt)', { exact: true });
+	const price = page.getByLabel('Pris i kronor', { exact: true });
 	for (const value of ['12,5', '12.5']) {
 		await price.fill(value);
 		expect((await exportJson(page)).json.beerPriceKr).toBe(12.5);
 	}
 	await price.fill('12,55');
 	await page.getByRole('button', { name: 'Ladda ner JSON' }).click();
-	await expect(page.getByRole('alert')).toContainText('högst en decimal');
+	await expect(price).toHaveJSProperty(
+		'validationMessage',
+		'Ange ett pris mellan 1 och 999 kr med högst en decimal.'
+	);
 	await price.fill('');
-	expect((await exportJson(page)).json).not.toHaveProperty('beerPriceKr');
+	await expect(price).toHaveJSProperty(
+		'validationMessage',
+		'Ange ett pris mellan 1 och 999 kr med högst en decimal.'
+	);
 });
 
 test('nutrient bases convert, export, reload and reset independently', async ({ page }) => {
@@ -917,6 +949,10 @@ test('serving details support multiple methods, imports, edits and reset without
 	await expect(page.getByText('Serveringstemperatur: Kylskåpskall', { exact: true })).toBeVisible();
 	await expect(page.getByText('Servering: Utan is', { exact: true })).toBeVisible();
 	await page.goto('skapa/');
+	await openEditorTools(page);
+	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
+	await page.getByText('Stället (valfritt)', { exact: true }).click();
+	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda');
 	await expect(page.getByRole('checkbox', { name: 'Glas', exact: true })).toBeChecked();
 	await expect(page.getByRole('checkbox', { name: 'Sugrör', exact: true })).toBeChecked();
@@ -1015,13 +1051,13 @@ test('nutrients automatically classify a new review, allow overrides and restore
 	await expect(energy).not.toBeChecked();
 	await expect(protein).not.toBeChecked();
 	await page.locator('#carbohydrate').fill('');
-	await expect(page.locator('#sugar-type')).toHaveValue('');
+	await expect(page.locator('#sugar-type')).toHaveValue('sugar-free');
 	await page.locator('#caffeine').fill('');
 	await page.locator('#protein').fill('');
 	const cleared = (await exportJson(page)).json;
 	expect(cleared.isEnergyDrink).toBeUndefined();
 	expect(cleared.isProteinDrink).toBeUndefined();
-	expect(cleared.sugarType).toBeUndefined();
+	expect(cleared.sugarType).toBe('sugar-free');
 });
 
 test('electrolyte category is editable, survives import and reset, and combines with home filters', async ({

@@ -67,9 +67,6 @@
 		{unit}/100 ml · {formatDrinkNumber(amount.perContainer)}
 		{unit} i hela förpackningen
 	</p>
-{:else}
-	<p class="text-xs text-muted">
-		Välj volym för att räkna om mellan 100 ml och hela förpackningen. Utan volym töms värdet när du
-		byter enhet.
-	</p>
+{:else if !volumeMl && (per100Ml !== undefined || perContainer !== undefined)}
+	<p class="text-xs text-muted">Ange volym innan du byter enhet, annars töms värdet.</p>
 {/if}

@@ -1,19 +1,20 @@
 <script lang="ts">
-	import PriceRuler from '$lib/components/price-ruler/PriceRuler.svelte';
 	import { untrack } from 'svelte';
-	import { parsePriceInput } from '$lib/utils/price';
+	import { parsePriceInput, isValidBeerPriceKr } from '$lib/utils/price';
 	import { DRINK_VOLUMES_ML } from '$lib/review-metadata';
 	import { formatDrinkVolume } from '$lib/utils/drink-facts';
 	let {
 		volumeMl = $bindable(),
 		beerPriceKr = $bindable(),
 		prefix,
-		ruler = false
+		required = false,
+		children
 	}: {
 		volumeMl?: number;
 		beerPriceKr?: number;
 		prefix: string;
-		ruler?: boolean;
+		required?: boolean;
+		children?: import('svelte').Snippet;
 	} = $props();
 	let priceInput = $state('');
 	$effect(() => {
@@ -36,15 +37,30 @@
 		customVolume = value === 'custom';
 		volumeMl = value === '' || customVolume ? undefined : Number(value);
 	}
+	let volumeElement: HTMLSelectElement;
+	$effect(() => {
+		volumeElement?.setCustomValidity(required && !selectedVolume ? 'Välj en volym.' : '');
+	});
+	let priceElement: HTMLInputElement;
+	$effect(() => {
+		priceElement?.setCustomValidity(
+			(required && beerPriceKr === undefined) ||
+				(beerPriceKr !== undefined && !isValidBeerPriceKr(beerPriceKr))
+				? 'Ange ett pris mellan 1 och 999 kr med högst en decimal.'
+				: ''
+		);
+	});
 	const inputClass = 'field mt-2';
 </script>
 
 <div class="grid gap-5 sm:grid-cols-2">
 	<div>
 		<label for={`${prefix}-volume`}
-			>Volym (valfritt)
+			>Volym{required ? '' : ' (valfritt)'}
 			<select
 				id={`${prefix}-volume`}
+				bind:this={volumeElement}
+				{required}
 				value={selectedVolume}
 				onchange={selectVolume}
 				class={inputClass}
@@ -72,29 +88,18 @@
 			</label>
 		{/if}
 	</div>
+	{#if children}<div class="space-y-3">{@render children()}</div>{/if}
 	<label for={`${prefix}-price`}
-		>Pris i kronor (valfritt)<input
+		>Pris i kronor{required ? '' : ' (valfritt)'}<input
 			id={`${prefix}-price`}
+			bind:this={priceElement}
+			{required}
 			type="text"
 			inputmode="decimal"
 			value={priceInput}
 			oninput={updatePrice}
-			aria-describedby={`${prefix}-price-help`}
+			placeholder="12,5"
 			class={inputClass}
 		/></label
 	>
 </div>
-{#if ruler}
-	<PriceRuler bind:price={beerPriceKr} />
-	<p class="text-sm text-muted">
-		Dra linjalen för att välja pris. Piltangenter ändrar med 10 öre; Page Up och Page Down med 10
-		kr. Du kan också skriva priset ovan.
-	</p>
-{/if}
-<p id={`${prefix}-price-help`} class="text-sm text-muted">
-	Ange 1–999 kr med högst en decimal, till exempel 12,5 eller 12.5.
-</p>
-<p class="text-sm text-muted">
-	LPK är volym delat med pris, i cl/kr. Välj förpackning och volym separat. Ange priset du betalade
-	för den valda volymen. Ange volymen för färdig dryck vid SodaStream eller sprutmaskin.
-</p>
