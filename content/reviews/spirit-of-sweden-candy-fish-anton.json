@@ -30,6 +30,7 @@
 	"carbohydrateGPer100Ml": 10,
 	"beerBrand": "Spirit of Sweden",
 	"beerPriceKr": 7.5,
+	"isOnSale": true,
 	"imageFocusX": 50,
 	"imageFocusY": 55,
 	"imageZoom": 1

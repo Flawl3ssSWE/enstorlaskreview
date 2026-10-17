@@ -45,6 +45,7 @@ export interface DrinkFacts {
 	customContainer?: string;
 	volumeMl?: number;
 	beerPriceKr?: number;
+	isOnSale?: boolean;
 }
 
 export interface ReviewContent extends Partial<ReviewRatingValues>, DrinkFacts {

@@ -191,6 +191,7 @@
 	let description = $state('');
 	let location = $state('');
 	let price = $state<number>();
+	let isOnSale = $state(false);
 	const suggestedTypes = $derived(
 		suggestDrinkTypes({
 			caffeineMgPer100Ml,
@@ -487,6 +488,7 @@
 			brandOverride = undefined;
 			location = '';
 			price = undefined;
+			isOnSale = false;
 			volumeMl = undefined;
 			energyOverride = undefined;
 			caffeineMgPer100Ml = undefined;
@@ -535,6 +537,7 @@
 		brandOverride = product.beerBrand ?? '';
 		location = product.location;
 		price = product.beerPriceKr;
+		isOnSale = product.isOnSale ?? false;
 		energyOverride = product.isEnergyDrink ?? null;
 		caffeineMgPer100Ml = product.caffeineMgPer100Ml;
 		caffeineMgPerContainer = product.caffeineMgPerContainer;
@@ -659,6 +662,7 @@
 			...(proteinGPerContainer !== undefined ? { proteinGPerContainer } : {}),
 			...(brand.trim() ? { beerBrand: brand.trim() } : {}),
 			...(price !== undefined ? { beerPriceKr: price } : {}),
+			...(isOnSale || existingReview?.isOnSale !== undefined ? { isOnSale } : {}),
 			...(latitude !== undefined ? { latitude } : {}),
 			...(longitude !== undefined ? { longitude } : {}),
 			imageFocusX,
@@ -1127,7 +1131,13 @@
 						/></label
 					>
 					{#key existingReview?.slug ?? ''}
-						<DrinkAmountFields bind:volumeMl bind:beerPriceKr={price} prefix="review-1" required>
+						<DrinkAmountFields
+							bind:volumeMl
+							bind:beerPriceKr={price}
+							bind:isOnSale
+							prefix="review-1"
+							required
+						>
 							<ContainerSelect
 								id="container"
 								suggested={isAutomatic('container', containerOverride, String(volumeMl)) &&

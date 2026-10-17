@@ -48,7 +48,9 @@
 	const types = $derived(drink ? drinkTypeLabels(drink) : []);
 	const resolvedImage = $derived(image === defaultImage ? defaultImage : `${base}/images/${image}`);
 
-	const beerPriceDisplay = $derived(getBeerPriceDisplay(beerPriceKr, isHappyHourPrice));
+	const beerPriceDisplay = $derived(
+		getBeerPriceDisplay(beerPriceKr, isHappyHourPrice, drink?.isOnSale)
+	);
 </script>
 
 <div
@@ -106,7 +108,9 @@
 				</div>
 			</div>
 		{/if}
-		{#if beerPriceDisplay?.note}<p class="text-xs text-muted">{beerPriceDisplay.note}</p>{/if}
+		{#if beerPriceDisplay?.note && !drink?.isOnSale}<p class="text-xs text-muted">
+				{beerPriceDisplay.note}
+			</p>{/if}
 		<ReviewDescription {description} variant="preview" />
 	</div>
 </div>

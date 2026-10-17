@@ -60,6 +60,7 @@ const fields = new Set([
 	'location',
 	'beerBrand',
 	'beerPriceKr',
+	'isOnSale',
 	'isHappyHourPrice',
 	'author',
 	'coAuthors',
@@ -235,6 +236,8 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 	}
 	if (data.beerPriceKr !== undefined && !isValidBeerPriceKr(data.beerPriceKr as number))
 		fail('Priset måste vara mellan 1 och 999 kr med högst en decimal.');
+	if (data.isOnSale !== undefined && typeof data.isOnSale !== 'boolean')
+		fail('Köpt på rea måste vara true eller false.');
 	if (data.isHappyHourPrice !== undefined && typeof data.isHappyHourPrice !== 'boolean')
 		fail('isHappyHourPrice måste vara true eller false.');
 	if (data.isHappyHourPrice && data.beerPriceKr === undefined) fail('Happy hour kräver ett pris.');

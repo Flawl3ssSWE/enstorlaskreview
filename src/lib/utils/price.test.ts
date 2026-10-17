@@ -40,3 +40,13 @@ it('parses either decimal separator and rejects extra precision or invalid text'
 	for (const value of ['12.55', '12,55', '12,5.0', 'abc', '1e2'])
 		expect(parsePriceInput(value)).toBeNaN();
 });
+
+it('marks store sale prices with an asterisk and a short sale note', () => {
+	expect(getBeerPriceDisplay(20, false, true)).toEqual({
+		text: '20 kr*',
+		note: '* Köpt på rea'
+	});
+	expect(getBeerPriceDisplay(20, true, true)?.note).toBe('* Köpt på rea');
+	expect(getBeerPriceDisplay(20, false, false)).toEqual({ text: '20 kr', note: null });
+	expect(getBeerPriceDisplay(undefined, false, true)).toBeNull();
+});

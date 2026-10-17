@@ -52,7 +52,9 @@
 			: undefined
 	);
 
-	const beerPriceDisplay = $derived(getBeerPriceDisplay(bar.beerPriceKr, bar.isHappyHourPrice));
+	const beerPriceDisplay = $derived(
+		getBeerPriceDisplay(bar.beerPriceKr, bar.isHappyHourPrice, bar.isOnSale)
+	);
 	const beerBrandDisplay = $derived(bar.beerBrand?.trim() || UNKNOWN_BRAND_LABEL);
 	const ratingFields = $derived(
 		bar.sodaRatings

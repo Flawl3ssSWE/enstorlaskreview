@@ -196,6 +196,21 @@ describe('soda reviews', () => {
 });
 
 describe('drink facts on independent reviews', () => {
+	it.each([true, false])(
+		'accepts the sale flag %s without an original or purchase price',
+		(isOnSale) => {
+			const { beerPriceKr: _price, ...content } = sodaFixture;
+			const review = validateReview({ ...content, isOnSale }, 'testsoda.json');
+			expect(review.isOnSale).toBe(isOnSale);
+			expect(review).not.toHaveProperty('beerPriceKr');
+			expect(review.rating).toBe(validateReview(sodaFixture, 'testsoda.json').rating);
+		}
+	);
+	it.each(['true', 1, null])('rejects invalid sale flags: %j', (isOnSale) => {
+		expect(() => validateReview({ ...sodaFixture, isOnSale }, 'testsoda.json')).toThrow(
+			'Köpt på rea måste vara true eller false.'
+		);
+	});
 	it('retains volume, price and caffeine without changing the score', () => {
 		const content = {
 			...sodaFixture,

@@ -1,4 +1,5 @@
 export const MAX_BEER_PRICE_KR = 999;
+export const SALE_PRICE_NOTE = '* Köpt på rea';
 export const HAPPY_HOUR_PRICE_NOTE = '* happy hour';
 
 export interface BeerPriceDisplay {
@@ -32,13 +33,14 @@ export const formatBeerPrice = (
 
 export const getBeerPriceDisplay = (
 	beerPriceKr: number | null | undefined,
-	isHappyHourPrice = false
+	isHappyHourPrice = false,
+	isOnSale = false
 ): BeerPriceDisplay | null => {
-	const text = formatBeerPrice(beerPriceKr, isHappyHourPrice);
+	const text = formatBeerPrice(beerPriceKr, isOnSale || isHappyHourPrice);
 	if (!text) return null;
 
 	return {
 		text,
-		note: isHappyHourPrice ? HAPPY_HOUR_PRICE_NOTE : null
+		note: isOnSale ? SALE_PRICE_NOTE : isHappyHourPrice ? HAPPY_HOUR_PRICE_NOTE : null
 	};
 };

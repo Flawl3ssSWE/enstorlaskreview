@@ -24,6 +24,7 @@ test('refreshed soda pages keep their details in both themes and responsive layo
 		}
 
 		await expect(page.getByRole('img', { name: 'Läskens helhetsbetyg 3 av 3' })).toBeVisible();
+		await expect(page.getByText('* Köpt på rea', { exact: true })).toBeVisible();
 		await expect(page.getByText('Läskfavorit', { exact: true })).toBeVisible();
 		await expect(page.getByText(/Återköpspotential:/)).toContainText('5/5');
 		const facts = page.getByRole('region', { name: 'Drycksfakta', exact: true });
@@ -58,4 +59,19 @@ test('refreshed soda pages keep their details in both themes and responsive layo
 			);
 		}
 	}
+});
+
+test('reviews without a sale flag omit the sale notice', async ({ page }) => {
+	await page.goto('hallonsoda/');
+	await expect(page.getByText('* Köpt på rea', { exact: true })).toHaveCount(0);
+});
+
+test('sale cards show an asterisk without the sale note on the main page', async ({ page }) => {
+	await page.goto('./?search=Testläsk');
+	const card = page.locator('main a[href$="/testsoda/"]');
+	await expect(card.getByText('20 kr*', { exact: true })).toBeVisible();
+	await expect(page.getByText(/Köpt på rea/)).toHaveCount(0);
+	await card.click();
+	await expect(page.getByText('20 kr*', { exact: true })).toBeVisible();
+	await expect(page.getByText('* Köpt på rea', { exact: true })).toBeVisible();
 });

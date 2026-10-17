@@ -28,6 +28,7 @@
 		"value": 5
 	},
 	"beerPriceKr": 20,
+	"isOnSale": true,
 	"volumeMl": 330,
 	"sodaId": "testlask",
 	"imageFocusX": 25,
