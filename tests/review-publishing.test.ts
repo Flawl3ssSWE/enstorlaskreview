@@ -8,12 +8,22 @@ const prUrl = 'https://github.com/Flawl3ssSWE/enstorlaskreview/pull/123';
 
 async function mockGitHub(
 	page: Page,
-	options: { rejectAuth?: boolean; failPr?: boolean; stale?: boolean; executable?: boolean } = {}
+	options: {
+		rejectAuth?: boolean;
+		failPr?: boolean;
+		stale?: boolean;
+		executable?: boolean;
+		trusted?: boolean;
+		failAutoMerge?: boolean;
+	} = {}
 ) {
 	const writes: { path: string; body: Record<string, unknown> }[] = [];
 	let branchExists = false;
 	let prExists = false;
 	let failPr = options.failPr;
+	let failAutoMerge = options.failAutoMerge;
+	let reviewPath = '';
+	let imagePath = '';
 	await page.route('https://api.github.com/**', async (route) => {
 		const request = route.request();
 		const path = new URL(request.url()).pathname;
@@ -33,8 +43,57 @@ async function mockGitHub(
 			expect(JSON.stringify(body)).not.toContain(token);
 			writes.push({ path, body });
 		}
-		if (path === '/user') return respond({ login: 'TestReviewer' }, options.rejectAuth ? 401 : 200);
+		if (path === '/user')
+			return respond(
+				{ login: options.trusted ? 'Flawl3ssSWE' : 'TestReviewer' },
+				options.rejectAuth ? 401 : 200
+			);
+		if (path.endsWith('/pulls/123'))
+			return respond({
+				number: 123,
+				node_id: 'PR_node',
+				state: 'open',
+				draft: false,
+				user: { login: 'Flawl3ssSWE' },
+				base: { ref: 'main', repo: { full_name: 'Flawl3ssSWE/enstorlaskreview' } },
+				head: { sha: 'new-commit', repo: { full_name: 'Flawl3ssSWE/enstorlaskreview' } },
+				changed_files: 2,
+				auto_merge: null
+			});
+		if (path.endsWith('/pulls/123/files'))
+			return respond([
+				{ filename: reviewPath, status: 'added' },
+				{ filename: imagePath, status: 'added' }
+			]);
+		if (path.endsWith('/git/trees/new-commit'))
+			return respond({
+				truncated: false,
+				tree: [
+					{ path: reviewPath, mode: '100644', type: 'blob' },
+					{ path: imagePath, mode: '100644', type: 'blob' }
+				]
+			});
+		if (path === '/graphql') {
+			if (failAutoMerge) {
+				failAutoMerge = false;
+				return respond({ errors: [{ message: 'Not enabled' }] });
+			}
+			return respond({
+				data: {
+					enablePullRequestAutoMerge: { pullRequest: { autoMergeRequest: { enabledAt: 'now' } } }
+				}
+			});
+		}
 		if (path.endsWith('/enstorlaskreview')) return respond({ permissions: { push: true } });
+		if (path.endsWith('/branches/main'))
+			return respond({
+				protected: true,
+				protection: {
+					required_status_checks: {
+						contexts: ['build', 'dependency-review', 'review-automerge-policy']
+					}
+				}
+			});
 		if (path.endsWith('/git/ref/heads/main')) return respond({ object: { sha: 'parent' } });
 		if (path.endsWith('/git/commits/parent')) return respond({ tree: { sha: 'base-tree' } });
 		if (path.endsWith('/git/trees/base-tree'))
@@ -72,7 +131,11 @@ async function mockGitHub(
 			});
 		if (path.endsWith('/git/blobs'))
 			return respond({ sha: body.encoding === 'base64' ? 'new-image' : 'new-json' });
-		if (path.endsWith('/git/trees')) return respond({ sha: 'new-tree' });
+		if (path.endsWith('/git/trees')) {
+			reviewPath = body.tree[0].path;
+			imagePath = body.tree[1]?.path;
+			return respond({ sha: 'new-tree' });
+		}
 		if (path.endsWith('/git/commits')) return respond({ sha: 'new-commit' });
 		if (path.includes('/git/ref/heads/reviews/'))
 			return respond(
@@ -83,14 +146,15 @@ async function mockGitHub(
 			branchExists = true;
 			return respond({ ref: body.ref });
 		}
-		if (path.endsWith('/pulls') && !body) return respond(prExists ? [{ html_url: prUrl }] : []);
+		if (path.endsWith('/pulls') && !body)
+			return respond(prExists ? [{ html_url: prUrl, number: 123 }] : []);
 		if (path.endsWith('/pulls') && body) {
 			if (failPr) {
 				failPr = false;
 				return respond({}, 403);
 			}
 			prExists = true;
-			return respond({ html_url: prUrl });
+			return respond({ html_url: prUrl, number: 123 });
 		}
 		throw new Error(`Unexpected GitHub request: ${path}`);
 	});
@@ -117,10 +181,10 @@ async function fillReview(page: Page, wizard: boolean) {
 	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 }
 
-async function connect(page: Page) {
+async function connect(page: Page, account = 'TestReviewer') {
 	await page.getByLabel('GitHub-token', { exact: true }).fill(token);
 	await page.getByRole('button', { name: 'Anslut till GitHub', exact: true }).click();
-	await expect(page.getByText('Ansluten som')).toContainText('TestReviewer');
+	await expect(page.getByText('Ansluten som')).toContainText(account);
 }
 
 for (const wizard of [false, true]) {
@@ -301,5 +365,33 @@ for (const wizard of [false, true]) {
 			await page.getByRole('button', { name: '4. Skicka recension', exact: true }).click();
 		await page.getByRole('button', { name: 'Skicka som PR', exact: true }).click();
 		await expect(page.getByRole('link', { name: 'Öppna PR', exact: true })).toBeVisible();
+	});
+}
+
+for (const failAutoMerge of [false, true]) {
+	test(`trusted new-review automerge preserves the PR and retries: ${failAutoMerge}`, async ({
+		page
+	}) => {
+		const writes = await mockGitHub(page, { trusted: true, failAutoMerge });
+		await fillReview(page, false);
+		await connect(page, 'Flawl3ssSWE');
+		await page.getByRole('button', { name: 'Skicka som PR', exact: true }).click();
+		await expect(page.getByRole('link', { name: 'Öppna PR', exact: true })).toHaveAttribute(
+			'href',
+			prUrl
+		);
+		if (failAutoMerge) {
+			await expect(
+				page.getByText('automatisk merge kunde inte aktiveras.', { exact: false })
+			).toBeVisible();
+			await page.getByRole('button', { name: 'Skicka som PR', exact: true }).click();
+		}
+		await expect(page.getByText('Automatisk merge är aktiverad', { exact: false })).toBeVisible();
+		expect(writes.filter((item) => item.path.endsWith('/pulls'))).toHaveLength(1);
+		expect(writes.filter((item) => item.path.endsWith('/git/commits'))).toHaveLength(1);
+		expect(writes.filter((item) => item.path === '/graphql').at(-1)?.body.variables).toEqual({
+			id: 'PR_node',
+			head: 'new-commit'
+		});
 	});
 }

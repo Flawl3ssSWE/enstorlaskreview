@@ -10,6 +10,8 @@ En Stor Läsk Review is a static Swedish soda review guide: SvelteKit 2, TypeScr
 
 Use Node 24.16.0 and pnpm 12.8.1. Use `.agents/skills/verify-soda-site/SKILL.md` for the established local verification workflow. Install with `pnpm install --frozen-lockfile` when dependencies changed or are missing. Use `pnpm dev` and `pnpm preview` when interactive inspection is needed; integration tests already start their own preview. No database or `.env` is required.
 
+CI exception: changes consisting only of added regular review JSON and supported images use frozen installation, the security audit, and a production build (which validates the entire collection). Edits, deletions, mixed changes, unavailable history, and manual workflow runs retain full CI verification. This exception does not reduce the checks required when implementing code or content-workflow changes locally.
+
 Before completing code work, run relevant unit tests (`pnpm test:unit --run`), `pnpm check`, and `pnpm lint`. Run `pnpm test:integration` for UI, route, or content workflow changes. Playwright uses separate labelled fixtures and a temporary asset directory; run `pnpm build` afterward to restore production output. Test repository-path behavior with `BASE_PATH=/enstorlaskreview`.
 
 ## Architecture
@@ -26,7 +28,7 @@ Migration-only MongoDB tooling lives in `tools/migration`, with a separate packa
 
 Keep pnpm and direct packages pinned, frozen CI installs, seven-day release delay, strict install-script decisions, and integrity verification. Put pnpm settings in `pnpm-workspace.yaml`; `.npmrc` holds registry configuration. Never globally allow lifecycle scripts or bypass security controls to fix installation. Review policy changes and narrowly justify any exception.
 
-Actions must use full verified commit SHAs. PR jobs have read-only tokens/no deployment secrets. The Pages deployment job has only Pages/OIDC permissions and must not check out source, install dependencies, or run repository code. Deploy only checked default-branch artifacts. Keep Dependabot proposals reviewed and disable automatic merges. CODEOWNERS requires repository rules for enforcement.
+Actions must use full verified commit SHAs. PR jobs have read-only tokens/no deployment secrets. The Pages deployment job has only Pages/OIDC permissions and must not check out source, install dependencies, or run repository code. Deploy only checked default-branch artifacts. Keep Dependabot proposals reviewed and disable their automatic merges. The site editor may request native squash auto-merge only for new review additions authored by GitHub account `Flawl3ssSWE`, using the existing transient browser token. Require the read-only `review-automerge-policy` check alongside build and dependency review; retain CODEOWNER review for sensitive files. No workflow receives merge/write credentials. CODEOWNERS requires repository rules for enforcement.
 
 Retain hash CSP for static output. Pages cannot set the former server's custom headers. The site has no analytics or consent banner. Do not add tracking or third-party scripts without a concrete need.
 

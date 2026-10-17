@@ -51,7 +51,11 @@ describe('CI trust boundary', () => {
 			expect(workflow.on).not.toHaveProperty('workflow_run');
 			for (const [name, job] of Object.entries(workflow.jobs)) {
 				if (name !== 'deploy')
-					expect(job.permissions ?? workflow.permissions).toEqual({ contents: 'read' });
+					expect(job.permissions ?? workflow.permissions).toEqual(
+						name === 'review-automerge-policy'
+							? { contents: 'read', 'pull-requests': 'read' }
+							: { contents: 'read' }
+					);
 				for (const step of job.steps) {
 					if (step.uses) expect(step.uses).toMatch(/^[\w-]+\/[\w-]+@[a-f0-9]{40}$/);
 					if (step.uses?.startsWith('actions/checkout@'))
@@ -60,6 +64,51 @@ describe('CI trust boundary', () => {
 				}
 			}
 		}
+	});
+	it('keeps required workflows unfiltered and gates only expensive checks on complete classification', () => {
+		const workflow = workflows.find((workflow) => workflow.jobs.deploy)!;
+		expect(workflow.on).not.toHaveProperty('pull_request.paths');
+		expect(workflow.on).not.toHaveProperty('pull_request.paths-ignore');
+		const steps = workflow.jobs.build.steps;
+		expect(
+			steps.find((step) => step.uses?.startsWith('actions/checkout@'))?.with?.['fetch-depth']
+		).toBe(0);
+		expect(steps.some((step) => step.run === 'node scripts/review-changes.ts')).toBe(true);
+		for (const command of [
+			'pnpm lint',
+			'pnpm check',
+			'pnpm test:unit --run',
+			'pnpm exec playwright install --with-deps chromium',
+			'pnpm test:integration'
+		])
+			expect(steps.find((step) => step.run === command)?.if).toBe(
+				"steps.changes.outputs.review_additions != 'true'"
+			);
+		for (const command of ['pnpm install --frozen-lockfile', 'pnpm build'])
+			expect(steps.find((step) => step.run === command)).not.toHaveProperty('if');
+		expect(steps.find((step) => step.run?.startsWith('pnpm audit'))).not.toHaveProperty('if');
+		expect(steps.some((step) => step.run === 'pnpm validate:content')).toBe(false);
+	});
+	it('reevaluates automerge policy for new commits and changes to auto-merge state', () => {
+		const workflow = workflows.find((workflow) => workflow.jobs['review-automerge-policy'])!;
+		expect(workflow.on).not.toHaveProperty('pull_request.paths');
+		expect(workflow.on).toHaveProperty(
+			'pull_request.types',
+			expect.arrayContaining([
+				'opened',
+				'synchronize',
+				'reopened',
+				'edited',
+				'auto_merge_enabled',
+				'auto_merge_disabled'
+			])
+		);
+		const job = workflow.jobs['review-automerge-policy'];
+		expect(job).not.toHaveProperty('if');
+		expect(job.steps.some((step) => step.run === 'node scripts/review-changes.ts --policy')).toBe(
+			true
+		);
+		expect(job.steps.some((step) => step.run?.includes('pnpm install'))).toBe(false);
 	});
 	it('does not execute source code inside the privileged deployment job', () => {
 		const workflow = workflows.find((workflow) => workflow.jobs.deploy)!;
