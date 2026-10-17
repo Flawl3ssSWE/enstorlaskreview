@@ -7,6 +7,7 @@ import {
 import { validateReview } from '../content/validation';
 import { contentKey, type ReviewSubmission } from '../content/submission';
 import type { ReviewContent } from '../types/bar-review';
+import { requestReviewAutomerge } from './github-review-automerge';
 
 const repositoryPath = `/repos/${REVIEW_REPOSITORY_OWNER}/${REVIEW_REPOSITORY_NAME}`;
 
@@ -16,6 +17,9 @@ export interface ReviewPublication {
 	commitSha?: string;
 	branchCreated: boolean;
 	prUrl?: string;
+	prNumber?: number;
+	prNodeId?: string;
+	autoMerge?: 'manual' | 'enabled' | 'failed';
 }
 
 interface TreeEntry {
@@ -262,9 +266,13 @@ async function inspectSubmission(client: GitHubClient, input: ReviewSubmission) 
 export async function publishReview(
 	client: GitHubClient,
 	job: ReviewPublication,
-	progress: (message: string) => void = () => {}
+	progress: (message: string) => void = () => {},
+	account = ''
 ): Promise<string> {
-	if (job.prUrl) return job.prUrl;
+	if (job.prUrl) {
+		await requestReviewAutomerge(client, job, account);
+		return job.prUrl;
+	}
 	const { input } = job;
 	if (!job.commitSha) {
 		progress('Kontrollerar recensioner och bilder på GitHub…');
@@ -323,11 +331,13 @@ export async function publishReview(
 		}
 	}
 	progress('Öppnar pull request…');
-	const existing = await client.request<{ html_url: string }[]>(
+	const existing = await client.request<{ html_url: string; number: number }[]>(
 		`${repositoryPath}/pulls?state=all&head=${encodeURIComponent(`${REVIEW_REPOSITORY_OWNER}:${job.branch}`)}&base=${REVIEW_BASE_BRANCH}`
 	);
 	if (existing.length) {
 		job.prUrl = existing[0].html_url;
+		job.prNumber = existing[0].number;
+		await requestReviewAutomerge(client, job, account);
 		return job.prUrl;
 	}
 	const paths = [`content/reviews/${input.review.slug}.json`];
@@ -336,7 +346,7 @@ export async function publishReview(
 		paths.push(
 			`Tidigare bild: content/reviews/images/${input.baseline.image} (behålls om den delas)`
 		);
-	const pr = await client.request<{ html_url: string }>(`${repositoryPath}/pulls`, {
+	const pr = await client.request<{ html_url: string; number: number }>(`${repositoryPath}/pulls`, {
 		title: `${input.baseline ? 'Uppdatera' : 'Lägg till'} recension: ${input.review.title}`,
 		body: `Recension av ${input.review.author}.\n\n${paths.map((path) => `- ${path}`).join('\n')}\n\nSkickad från recensionsformuläret. Granska ändringarna och invänta kontrollerna före merge.`,
 		head: job.branch,
@@ -344,5 +354,7 @@ export async function publishReview(
 		draft: false
 	});
 	job.prUrl = pr.html_url;
+	job.prNumber = pr.number;
+	await requestReviewAutomerge(client, job, account);
 	return job.prUrl;
 }

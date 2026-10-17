@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { publicationMessage } from '$lib/utils/github-review-automerge';
 	import { onDestroy, tick, untrack } from 'svelte';
 	import FileUp from '@lucide/svelte/icons/file-up';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -718,12 +719,12 @@
 				job,
 				(message) => {
 					if (generation === githubGeneration) publicationProgress = message;
-				}
+				},
+				githubAccount
 			);
 			if (generation === githubGeneration) {
 				publicationUrl = url;
-				publicationProgress =
-					'Din PR är klar. Recensionen visas på sidan efter merge och publicering.';
+				publicationProgress = publicationMessage(job);
 			}
 		} catch (cause) {
 			if (generation !== githubGeneration) return;

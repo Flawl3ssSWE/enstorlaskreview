@@ -31,8 +31,14 @@ form and stores progress only in memory; uncertain branch/PR responses are recon
 and retries reuse the same branch and commit. Publication links and success messages are shown only while the form matches the submitted content and image; loading another review clears publication state. A comparison link provides recovery after a partial
 submission. GitHub enforces repository authorization; Contents and Pull requests write permissions
 are required and are broader than the review folders. Required PRs/checks rely on repository rules.
-Manual merge triggers the existing checked deployment, with no backend, persistent drafts,
-auto-merge, or deployment-status polling.
+The editor requests native squash auto-merge for new additions by authenticated GitHub account
+`Flawl3ssSWE`, after inspecting the actual PR author, base, expected head, complete file list, and
+regular file modes. Other submissions remain manual. PR creation and auto-merge outcomes are tracked
+separately; failures preserve the PR link and retries reuse the same PR. The existing transient
+browser token enables auto-merge through GraphQL; no workflow has merge credentials. A required
+read-only policy check reevaluates enabled auto-merge on PR and auto-merge-state updates. Required
+checks and any human approvals still apply. Merge triggers the checked deployment, with no backend,
+persistent drafts, or deployment-status polling.
 
 ## Review calculations
 
@@ -65,7 +71,7 @@ The root layout prerenders with trailing slashes. Dynamic review/history routes 
 
 ## External dependencies and trust
 
-OpenFreeMap supplies map style/tiles only after the visitor accepts the overlay on the map page. The map never requests browser location; acceptance stays in component memory and resets when leaving the page. The site uses no analytics scripts, analytics cookies, or consent banner. Review content and code are deployed together after repository review. CI builds untrusted PRs without write credentials; only main-branch builds upload a Pages artifact. The privileged deploy job runs no source-controlled scripts.
+OpenFreeMap supplies map style/tiles only after the visitor accepts the overlay on the map page. The map never requests browser location; acceptance stays in component memory and resets when leaving the page. The site uses no analytics scripts, analytics cookies, or consent banner. Review content and code are deployed together after repository review. CI builds untrusted PRs without write credentials; only main-branch builds upload a Pages artifact. Added regular review JSON/images qualify for content validation, audit, and a production build without application/browser tests; edits, deletions, mixed changes, and uncertain comparisons retain full verification. The production build validates the whole collection. The classifier uses complete PR or push ranges and required checks remain present on every PR. The privileged deploy job runs no source-controlled scripts.
 
 Migration credentials exist only in a local, separately installed tool. Normal builds need no secrets and can run with an empty review collection. Static CSP uses hashes; Pages response headers differ from the retired Node deployment. See README for repository settings and cutover requirements.
 

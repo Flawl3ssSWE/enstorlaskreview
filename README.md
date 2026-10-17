@@ -52,8 +52,12 @@ Open `/skapa/` or `/skapa/wizard/` directly; neither editor is linked in public 
 **Skicka som PR** is the primary publishing action for new reviews and edits. Prepare the review,
 connect to GitHub, and submit. The browser creates a unique review branch containing one commit
 with the JSON, any new image, and removal of a replaced image only if no other review uses it.
-Open the resulting PR, review the changes, wait for checks, and merge it. The existing deployment
-then publishes the site; submitting a PR alone does not publish the review.
+New reviews submitted by GitHub account **Flawl3ssSWE** request automatic squash merging after
+required checks and any required approvals pass. Other accounts and edits require manual merging.
+The editor verifies enforced required checks, the actual PR author, branch, commit, added files, and regular file modes.
+If automatic merging cannot be enabled, the PR remains available for manual merging; resubmitting
+reuses that PR and retries. The status distinguishes a created PR from enabled automatic merging.
+The existing deployment then publishes the site; submitting a PR alone does not publish the review.
 
 For the repository owner's account, create a GitHub **fine-grained personal access token** with
 access only to `Flawl3ssSWE/enstorlaskreview`, an expiration date, and repository permissions
@@ -66,7 +70,8 @@ selection alone does not grant access. See [GitHub's token documentation](https:
 Tokens stay only in the current editor's memory and are cleared on **Koppla från**, navigation,
 or reload. They are never included in review files or stored in browser storage. Token permissions
 cover repository content, not only the review folders. Required PRs and checks must be enforced by
-repository protections; the editor does not configure those settings. No auto-merge is enabled.
+repository protections; the editor does not configure those settings. Auto-merge requires the
+repository setup below. It uses the existing browser token, with no additional repository secret.
 
 Before writing, the editor checks current GitHub content for filename collisions and changed/deleted
 edit baselines. For a stale edit, download your changes for safekeeping, then select **Ladda aktuell recension från GitHub**. This replaces the form and its edit baseline with current `main` content, even before the site deployment finishes.
@@ -139,9 +144,24 @@ The included workflow targets `https://Flawl3ssSWE.github.io/enstorlaskreview/` 
 
 1. In repository Settings → Pages, select **GitHub Actions** as the publishing source.
 2. Configure the `github-pages` environment to accept deployment only from `main`.
-3. Protect `main`: require pull requests and the build and dependency-review checks, block force pushes/deletion, and require CODEOWNER review for sensitive files when another maintainer is available to review. CODEOWNERS alone does not enforce review. Maintainers should enable 2FA/passkeys and restrict write access.
-4. Enable Dependabot alerts/security updates and secret scanning/push protection where available. Dependency review requires a public repository or the applicable private-repository security entitlement.
-5. Merge the migration only after content acceptance. GitHub Actions deploys automatically; this local implementation does not change repository settings or publish anything.
+3. Protect `main`: require pull requests and the `build`, `dependency-review`, and `review-automerge-policy` checks from GitHub Actions, require branches to be up to date before merging, prevent bypassing required checks (including by administrators), block force pushes/deletion, and require CODEOWNER review for sensitive files. Plain review additions must not require a human approval if they should publish unattended. CODEOWNERS alone does not enforce review. Maintainers should enable 2FA/passkeys and restrict write access.
+4. Under **Settings → General → Pull Requests**, enable **Allow squash merging** and **Allow auto-merge** only after the required checks are enforced. The editor requests auto-merge only for new additions from `Flawl3ssSWE`; GitHub still enforces checks and required approvals. The policy check rejects enabled auto-merge for edits, code changes, or other authors; disable auto-merge to merge such PRs manually. PRs opened outside the editor are not opted in automatically.
+5. Enable Dependabot alerts/security updates and secret scanning/push protection where available. Dependency review requires a public repository or the applicable private-repository security entitlement.
+6. Merge the migration only after content acceptance. GitHub Actions deploys automatically; this local implementation does not change repository settings or publish anything.
+
+### New-review CI fast path
+
+PRs and pushes to `main` containing only added regular review JSON files and supported raster images
+skip application lint, type checks, unit tests, Chromium installation, and Playwright. At least one
+review JSON must be added. Frozen dependency installation, the existing security audit, dependency
+review on PRs, and a production build remain. The build validates the entire published collection,
+including image references/signatures and duplicate slugs, and prerenders the real reviews.
+
+Edits, deletions, renames, executable files, symlinks, unrelated files, missing comparison history,
+and manual workflow runs use full verification. The classifier compares the complete PR change set
+or the complete push before/after range. Required workflows are never skipped by path filters.
+Browser tests build fictional fixtures, so they do not verify a newly submitted review's rendering;
+the production build remains required on both paths. Production output is rebuilt after browser tests.
 
 For a custom domain or an account-level Pages site, change workflow `BASE_PATH` to an empty string and configure the domain in Pages settings. For a renamed repository, update the base path and `src/lib/site.ts` history destination. Local testing of the project path:
 
