@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import FavoriteBadge from '$lib/components/FavoriteBadge.svelte';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 	import defaultImage from '$lib/images/image.png';
 	import DrinkTypeIcons from '$lib/components/DrinkTypeIcons.svelte';
@@ -72,11 +73,9 @@
 				<ReviewDistance {distanceKm} variant="photo" />
 			</div>{/if}
 		{#if favorite}
-			<p
-				class="absolute left-4 top-4 rounded-full border border-white/30 bg-black/60 px-3 py-1 text-xs font-semibold text-on-photo backdrop-blur-md"
-			>
-				{favorite}
-			</p>
+			<div class="absolute left-3 top-3">
+				<FavoriteBadge />
+			</div>
 		{/if}
 		<div class="absolute inset-x-0 bottom-0 p-5 text-on-photo">
 			<div class="flex items-end justify-between gap-3">

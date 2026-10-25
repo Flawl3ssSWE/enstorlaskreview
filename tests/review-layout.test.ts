@@ -66,6 +66,40 @@ test('reviews without a sale flag omit the sale notice', async ({ page }) => {
 	await expect(page.getByText('* Köpt på rea', { exact: true })).toHaveCount(0);
 });
 
+test('favorite seals follow each review on cards and soda pages', async ({ page }, testInfo) => {
+	for (const width of [320, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto('./?search=Testläsk');
+		const favoriteCard = page.locator('main a[href$="/testsoda/"]');
+		const otherCard = page.locator('main a[href$="/testsoda-robin/"]');
+		const badge = favoriteCard.getByText('Läskfavorit', { exact: true });
+		await expect(badge).toBeVisible();
+		const badgeImage = badge.locator('..').locator('img');
+		await expect(badgeImage).toBeVisible();
+		await expect(badgeImage).toHaveJSProperty('naturalWidth', 1312);
+		await expect(otherCard.getByText('Läskfavorit', { exact: true })).toHaveCount(0);
+		const photo = await favoriteCard.getByRole('img', { name: 'Testläsk' }).boundingBox();
+		const seal = await badge.locator('..').boundingBox();
+		expect(seal!.x).toBeGreaterThan(photo!.x);
+		expect(seal!.y).toBeGreaterThan(photo!.y);
+		expect(seal!.x + seal!.width).toBeLessThan(photo!.x + photo!.width);
+		expect(seal!.y + seal!.height).toBeLessThan(photo!.y + photo!.height);
+		await favoriteCard.screenshot({ path: testInfo.outputPath(`favorite-card-${width}.png`) });
+		await favoriteCard.click();
+		await expect(
+			page.getByRole('heading', { name: 'Testläsk', level: 1, exact: true })
+		).toBeVisible();
+		await expect(page.getByText('Läskfavorit', { exact: true })).toBeVisible();
+		await expect(
+			page.getByText('Läskfavorit', { exact: true }).locator('..').locator('img')
+		).toHaveJSProperty('naturalWidth', 1312);
+	}
+	for (const slug of ['testsoda-robin', 'hallonsoda']) {
+		await page.goto(`${slug}/`);
+		await expect(page.getByText('Läskfavorit', { exact: true })).toHaveCount(0);
+	}
+});
+
 test('sale cards show an asterisk without the sale note on the main page', async ({ page }) => {
 	await page.goto('./?search=Testläsk');
 	const card = page.locator('main a[href$="/testsoda/"]');
