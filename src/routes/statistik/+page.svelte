@@ -8,6 +8,36 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+	type BrandSort =
+		| 'brand'
+		| 'reviewCount'
+		| 'averagePrice'
+		| 'averagePricePerLiter'
+		| 'averageClPerKrona';
+	let brandSort = $state<BrandSort>('brand');
+	let brandDescending = $state(false);
+	const brandColumns: { key: BrandSort; label: string }[] = [
+		{ key: 'brand', label: 'Märke' },
+		{ key: 'reviewCount', label: 'Recensioner' },
+		{ key: 'averagePrice', label: 'Snittpris (kr)' },
+		{ key: 'averagePricePerLiter', label: 'Literpris (kr/l)' },
+		{ key: 'averageClPerKrona', label: 'Läsk per krona (cl/kr)' }
+	];
+	const sortedBrands = $derived(
+		[...data.statistics.brands].sort((a, b) => {
+			const left = a[brandSort];
+			const right = b[brandSort];
+			if (left === null) return right === null ? a.brand.localeCompare(b.brand, 'sv') : 1;
+			if (right === null) return -1;
+			const order =
+				typeof left === 'string' ? left.localeCompare(String(right), 'sv') : left - Number(right);
+			return (brandDescending ? -order : order) || a.brand.localeCompare(b.brand, 'sv');
+		})
+	);
+	function sortBrands(key: BrandSort) {
+		brandDescending = brandSort === key ? !brandDescending : false;
+		brandSort = key;
+	}
 
 	const decimalFormatter = new Intl.NumberFormat('sv-SE', {
 		minimumFractionDigits: 0,
@@ -62,12 +92,25 @@
 			note: `Baserat på ${data.statistics.priceReviewCount} prisuppgifter. Förpackningarnas storlek varierar.`
 		},
 		{
+			label: 'Sammanlagt angivet inköpspris',
+			value: `${formatDecimal(data.statistics.totalRecordedSpend)} kr`,
+			note: `Summan av ${data.statistics.priceReviewCount} prisuppgifter. Ett inköp per recension, oavsett antal medförfattare. Detta är inte en fullständig utgiftsredovisning.`
+		},
+		{
 			label: 'Snittpris per liter',
 			value:
 				data.statistics.averagePricePerLiter === null
 					? '–'
 					: `${formatDecimal(data.statistics.averagePricePerLiter)} kr/l`,
 			note: `Genomsnittligt literpris från ${data.statistics.unitPriceReviewCount} recensioner med både pris och volym.`
+		},
+		{
+			label: 'Läsk per krona',
+			value:
+				data.statistics.averageClPerKrona === null
+					? '–'
+					: `${formatDecimal(data.statistics.averageClPerKrona)} cl/kr`,
+			note: `Genomsnittlig volym per krona från ${data.statistics.unitPriceReviewCount} recensioner med både pris och volym.`
 		}
 	]);
 	const rankings = $derived([
@@ -91,14 +134,6 @@
 		}
 	]);
 </script>
-
-<svelte:head>
-	<title>Statistik</title>
-	<meta
-		name="description"
-		content="Betyg, literpriser och innehållstoppar för koffein, protein och kolhydrater från våra läskrecensioner"
-	/>
-</svelte:head>
 
 <section class="page-shell">
 	<div class="mx-auto w-full max-w-6xl">
@@ -161,6 +196,11 @@
 									{formatDecimal(ranking.products[0].value)}
 									{ranking.unit}
 								</p>
+								{#if ranking.unit === 'kr/l'}
+									<p class="mt-1 text-sm text-muted">
+										{formatDecimal(100 / ranking.products[0].value)} cl per krona
+									</p>
+								{/if}
 								<ul class="mt-3 space-y-2">
 									{#each ranking.products as product (product.slug)}
 										<li>
@@ -244,9 +284,10 @@
 
 		{#if data.statistics.sodaReviewCount > 0}
 			<section class="glass-panel mt-6 p-6 sm:p-8">
-				<h2 class="text-2xl font-semibold text-ink">Läskens betygsprofil</h2>
+				<h2 class="text-2xl font-semibold text-ink">Läskens snittbetyg</h2>
 				<p class="mt-2 text-sm leading-relaxed text-secondary">
-					Snitt på skalan 0–5. Sötma och konsistens beskriver egenskaper, inte kvalitet.
+					Snitt på skalan 0–5. Sötma, kolsyra och konsistens beskriver intensitet. Kolsyra går från
+					0 = avslagen till 5 = väldigt kolsyrad. I totalbetyget premieras mer kolsyra.
 				</p>
 				<dl class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
 					{#each data.statistics.ratingAverages as metric}
@@ -269,6 +310,73 @@
 				</dl>
 			</section>
 		{/if}
+		<section class="glass-panel mt-6 p-6 sm:p-8" aria-labelledby="brands-heading">
+			<h2 id="brands-heading" class="text-2xl font-semibold text-ink">Priser per märke</h2>
+			<p class="mt-3 max-w-prose text-sm leading-relaxed text-secondary">
+				Jämför genomsnitt från recensioner med angivet märke. Förpackningarnas storlek varierar;
+				literpris och läsk per krona använder bara recensioner med både pris och volym. Välj en
+				kolumnrubrik för att sortera. Saknade uppgifter visas sist.
+			</p>
+			{#if sortedBrands.length}
+				<!-- Keyboard users need to scroll the wide table. -->
+				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+				<div
+					class="mt-6 max-w-full overflow-x-auto rounded-xl border border-line"
+					tabindex="0"
+					role="region"
+					aria-label="Märkestabell, rulla i sidled vid behov"
+				>
+					<table class="w-full text-left text-sm">
+						<caption class="sr-only"
+							>Genomsnittliga priser och volym per krona för varje märke</caption
+						>
+						<thead class="border-b border-line bg-surface-raised text-secondary">
+							<tr>
+								{#each brandColumns as column (column.key)}
+									<th
+										scope="col"
+										aria-sort={brandSort === column.key
+											? brandDescending
+												? 'descending'
+												: 'ascending'
+											: 'none'}
+										class="p-3 font-semibold"
+									>
+										<button
+											type="button"
+											class="flex min-h-11 items-center gap-2 rounded-lg text-left hover:text-accent"
+											onclick={() => sortBrands(column.key)}
+										>
+											{column.label}<span aria-hidden="true"
+												>{brandSort === column.key ? (brandDescending ? '↓' : '↑') : '↕'}</span
+											>
+										</button>
+									</th>
+								{/each}
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-line">
+							{#each sortedBrands as brand (brand.brand)}
+								<tr>
+									<th scope="row" class="p-3 font-semibold text-ink">{brand.brand}</th>
+									<td class="p-3 tabular-nums text-secondary"
+										>{formatWholeNumber(brand.reviewCount)}</td
+									>
+									{#each brandColumns.slice(2) as column (column.key)}
+										<td class="p-3 tabular-nums text-secondary">
+											{formatDecimal(brand[column.key] as number | null)}
+										</td>
+									{/each}
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{:else}
+				<p class="mt-4 text-sm text-muted">Inga recensioner med angivet märke än.</p>
+			{/if}
+		</section>
+
 		<p class="mx-auto mt-4 w-full max-w-6xl text-xs leading-relaxed text-muted">
 			Betyg, läskfavoriter och priser räknas per recension. Saknade uppgifter ingår inte i
 			respektive snitt. Literpris beräknas från angivet pris och volym; eventuella kampanjpriser

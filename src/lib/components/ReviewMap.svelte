@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import RatingMug from '$lib/components/RatingMug.svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import type { PublicReviewMapMarker } from '$lib/types/review-map';
@@ -14,6 +15,7 @@
 	let selectedMarker = $state<PublicReviewMapMarker | null>(null);
 	let mapUnavailable = $state(false);
 	let mapAccepted = $state(false);
+	let attributionHeight = $state(0);
 	let markerController: ReturnType<typeof createReviewMarkers> | null = null;
 	let selectedElement: HTMLButtonElement | null = null;
 	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
@@ -30,7 +32,12 @@
 		selectedElement?.focus();
 	};
 	const handleKeydown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && selectedMarker) {
+		if (
+			event.key === 'Escape' &&
+			selectedMarker &&
+			!event.defaultPrevented &&
+			!document.querySelector(':popover-open, dialog[open]')
+		) {
 			event.preventDefault();
 			closePreview();
 		}
@@ -43,6 +50,7 @@
 		if (!mapAccepted) return;
 		let destroyed = false;
 		let map: import('maplibre-gl').Map | null = null;
+		let resizeObserver: ResizeObserver | null = null;
 		const initialize = async () => {
 			try {
 				const maplibre = await import('maplibre-gl');
@@ -55,6 +63,15 @@
 					zoom: GOTHENBURG_START_ZOOM
 				});
 				map = initializedMap;
+				resizeObserver = new ResizeObserver((entries) => {
+					for (const entry of entries) {
+						if (entry.target === container) initializedMap.resize();
+						else attributionHeight = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
+					}
+				});
+				resizeObserver.observe(container);
+				const attribution = container.querySelector('.maplibregl-ctrl-bottom-right');
+				if (attribution) resizeObserver.observe(attribution);
 				initializedMap.addControl(
 					new maplibre.NavigationControl({ showCompass: false }),
 					'top-right'
@@ -76,6 +93,7 @@
 		void initialize();
 		return () => {
 			destroyed = true;
+			resizeObserver?.disconnect();
 			markerController?.destroy();
 			markerController = null;
 			map?.remove();
@@ -86,11 +104,12 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div
-	class="relative overflow-hidden rounded-[1.65rem] border border-line bg-surface-raised shadow-[0_16px_40px_-30px_rgba(15,23,42,0.55)]"
+	style:--map-attribution-height={`${attributionHeight}px`}
+	class="map-frame relative isolate overflow-hidden rounded-[1.65rem] border border-line bg-surface-raised shadow-[0_16px_40px_-30px_rgba(15,23,42,0.55)]"
 >
 	<div
 		bind:this={container}
-		class="h-[min(66svh,38rem)] min-h-[24rem] w-full"
+		class="h-[calc(100svh-13rem)] min-h-[28rem] w-full"
 		aria-label="Karta över platser där vi har provat läsk"
 	></div>
 
@@ -135,13 +154,18 @@
 
 	{#if selectedMarker}
 		<section
-			class="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-line bg-surface-raised p-4 shadow-[0_18px_42px_-22px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
+			class="map-preview absolute inset-x-4 z-10 flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised p-4 shadow-[0_18px_42px_-22px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:right-auto sm:w-80"
 			aria-label={`Information om ${selectedMarker.title}`}
 		>
-			<div class="flex items-start justify-between gap-3">
+			<div class="flex shrink-0 items-start justify-between gap-3">
 				<div>
 					<p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recension</p>
-					<h2 class="mt-1 text-xl font-semibold text-ink">{selectedMarker.title}</h2>
+					<h2
+						class="mt-1 line-clamp-2 break-words text-xl font-semibold text-ink"
+						title={selectedMarker.title}
+					>
+						{selectedMarker.title}
+					</h2>
 				</div>
 				<button
 					type="button"
@@ -152,13 +176,13 @@
 					×
 				</button>
 			</div>
-			<p class="mt-2 text-sm text-secondary">{selectedMarker.location}</p>
-			<p class="mt-3 text-sm font-semibold text-ink">
-				Helhetsbetyg: {selectedMarker.rating}/3
-			</p>
+			<div class="min-h-0 overflow-y-auto overscroll-contain">
+				<p class="mt-2 break-words text-sm text-secondary">{selectedMarker.location}</p>
+				<div class="mt-3 text-ink"><RatingMug rating={selectedMarker.rating} /></div>
+			</div>
 			<a
 				href={resolve('/[slug]', { slug: selectedMarker.slug }) + '/'}
-				class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-ember px-4 text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+				class="mt-4 inline-flex min-h-11 shrink-0 self-start items-center justify-center rounded-full bg-ember px-4 text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
 			>
 				Läs recension
 			</a>
@@ -167,6 +191,21 @@
 </div>
 
 <style>
+	.map-preview {
+		bottom: calc(1rem + var(--map-attribution-height) + env(safe-area-inset-bottom));
+		left: max(1rem, env(safe-area-inset-left));
+		max-height: calc(100% - 6rem - var(--map-attribution-height) - env(safe-area-inset-bottom));
+	}
+
+	.map-frame :global(.maplibregl-ctrl-bottom-right) {
+		bottom: env(safe-area-inset-bottom);
+		right: env(safe-area-inset-right);
+	}
+
+	.map-frame :global(.maplibregl-ctrl-top-right) {
+		right: env(safe-area-inset-right);
+	}
+
 	:global(.bar-map-marker-positioner) {
 		width: 2rem;
 		height: 2rem;

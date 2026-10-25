@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FavoriteBadge from '$lib/components/FavoriteBadge.svelte';
 	import RatingCells from '$lib/components/RatingCells.svelte';
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
 	import RepurchasePotential from '$lib/components/RepurchasePotential.svelte';
@@ -13,7 +14,7 @@
 	import HelpTip from '$lib/components/HelpTip.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import MapPin from '@lucide/svelte/icons/map-pin';
-	import CupSoda from '@lucide/svelte/icons/cup-soda';
+	import RatingMug from '$lib/components/RatingMug.svelte';
 	import {
 		REVIEW_RATING_METRICS,
 		SODA_RATING_METRICS,
@@ -52,7 +53,9 @@
 			: undefined
 	);
 
-	const beerPriceDisplay = $derived(getBeerPriceDisplay(bar.beerPriceKr, bar.isHappyHourPrice));
+	const beerPriceDisplay = $derived(
+		getBeerPriceDisplay(bar.beerPriceKr, bar.isHappyHourPrice, bar.isOnSale)
+	);
 	const beerBrandDisplay = $derived(bar.beerBrand?.trim() || UNKNOWN_BRAND_LABEL);
 	const ratingFields = $derived(
 		bar.sodaRatings
@@ -84,10 +87,6 @@
 	}
 </script>
 
-<svelte:head>
-	<title>{bar.title} – En Stor Läsk Review</title>
-</svelte:head>
-
 <section class="page-shell">
 	{#if demo}
 		<p class="mb-3 border-l-2 border-accent pl-3 text-sm text-secondary">
@@ -103,7 +102,7 @@
 	<article class="glass-panel mt-4 overflow-hidden">
 		<div class="md:grid md:grid-cols-2">
 			<div class="p-3">
-				<div class="overflow-hidden rounded-2xl">
+				<div class="relative overflow-hidden rounded-2xl">
 					<ReviewImage
 						src={imageSrc ?? `${base}/images/${bar.image}`}
 						alt={bar.title}
@@ -112,17 +111,19 @@
 						zoom={bar.imageZoom}
 						square
 					/>
+					{#if favorite}
+						<div class="absolute left-3 top-3 sm:left-4 sm:top-4">
+							<FavoriteBadge large />
+						</div>
+					{/if}
 				</div>
 			</div>
 			<header
 				class="flex min-w-0 flex-col p-5 pb-0 sm:p-8 sm:pb-0 md:justify-center md:p-8 lg:p-10"
 			>
-				{#if favorite}<p
-						class="mb-4 self-start rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-sm font-semibold text-accent"
-					>
-						{favorite}
-					</p>{/if}
-				<h1 class="text-balance text-3xl font-semibold text-ink sm:text-4xl lg:text-5xl">
+				<h1
+					class="break-words text-balance text-3xl font-semibold text-ink sm:text-4xl lg:text-5xl"
+				>
 					{bar.title}
 				</h1>
 				{#if bar.location}
@@ -138,23 +139,12 @@
 				{/if}
 				<div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
 					<div class="flex shrink-0 items-center gap-4">
-						<p
-							class="flex gap-1"
-							role="img"
-							aria-label={`${bar.sodaRatings ? 'Läskens helhetsbetyg' : 'Helhetsbetyg'} ${bar.rating} av 3`}
-						>
-							{#each { length: 3 } as _, index (index)}
-								<CupSoda
-									size={32}
-									strokeWidth={1.75}
-									class={index < bar.rating ? 'text-accent' : 'text-muted/40'}
-									aria-hidden="true"
-								/>
-							{/each}
-						</p>
-						<p class="text-sm text-secondary" aria-hidden="true">
-							<span class="font-semibold tabular-nums text-ink">{bar.rating} av 3</span>
-						</p>
+						<RatingMug
+							rating={bar.rating}
+							label={bar.sodaRatings ? 'Läskens helhetsbetyg' : 'Helhetsbetyg'}
+							large
+							words
+						/>
 					</div>
 					{#if types.length}
 						<div role="group" aria-label="Dryckens egenskaper">
@@ -281,9 +271,7 @@
 										<p class="mt-1 text-sm text-secondary">{review.title}</p>
 										<p class="mt-1 text-xs text-muted">{formatDate(review.createdAt)}</p>
 									</div>
-									<span class="shrink-0 font-semibold tabular-nums text-accent"
-										>{review.rating}/3</span
-									>
+									<RatingMug rating={review.rating} />
 								</a>
 							</li>
 						{/each}

@@ -1,8 +1,8 @@
 {
-	"title": "Faxe Kondi Zero Sugarr",
-	"sodaId": "faxe-kondi-zero-sugarr",
-	"slug": "faxe-kondi-zero-sugarr-anton",
-	"image": "faxe-kondi-zero-sugarr-anton.webp",
+	"title": "Faxe Kondi Zero Sugar",
+	"sodaId": "faxe-kondi-zero-sugar",
+	"slug": "faxe-kondi-zero-sugar-anton",
+	"image": "faxe-kondi-zero-sugar-anton.webp",
 	"location": "",
 	"createdAt": "2026-10-15T12:05:17.749Z",
 	"updatedAt": "2026-10-15T12:05:17.749Z",
@@ -28,6 +28,7 @@
 	"servedWithIce": false,
 	"beerBrand": "Faxe Kondi",
 	"beerPriceKr": 7.5,
+	"isOnSale": true,
 	"imageFocusX": 50,
 	"imageFocusY": 87.73006134969269,
 	"imageZoom": 1

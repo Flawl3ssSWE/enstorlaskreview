@@ -13,6 +13,7 @@ pnpm validate:content
 pnpm check
 pnpm lint
 pnpm test:unit --run
+pnpm test:coverage
 pnpm exec playwright install chromium
 pnpm test:integration
 pnpm build
@@ -92,9 +93,9 @@ To link independent reviews of the same soda, give them the same optional `sodaI
 
 The optional `container` records what the reviewer drank from. Choose `Burk`, `Flaska`, `Glasflaska`, `SodaStream smak`, `Sprutmaskin`, or `Annan`. Choosing `Annan` requires a separate `customContainer` label of 1–80 characters without surrounding whitespace or control characters; other container types must omit that field. Choose volume separately; `volumeMl` is stored in ml, for example `330` for 33 cl or `1500` for 1.5 l. Choose **Annan volym** to enter a positive volume in ml, including decimals. Existing unusual volumes open in that input when editing. Either field may be omitted when unknown. Combined container values (such as `Burk 33cl`) are rejected. There is no automatic conversion.
 
-Soda ratings are `taste`, `sweetness`, `carbonation`, `mouthfeel`, `mouthfeelMatch`, `drinkability`, `matchesName`, and `value`. Sweetness measures intensity (0 = not sweet, 3 = perfect, 5 = too sweet). Its balance rises linearly from 0 at intensity 0 to 5 at intensity 3, then falls linearly to 0 at intensity 5. Consistency measures runniness (0 = thick, 5 = very runny); only `mouthfeelMatch` affects quality. Weights: taste 30%; sweetness balance, carbonation, and drinkability 15% each; consistency suitability and matching the name 10% each; value 5%. Apply the 0–3 thresholds (2, 3.25, 4.5) to each review's own precise score. Recommendations are explicit choices independent of the numeric score.
+Soda ratings are `taste`, `sweetness`, `carbonation`, `mouthfeel`, `mouthfeelMatch`, `drinkability`, `matchesName`, and `value`. Sweetness measures intensity (0 = not sweet, 3 = perfect, 5 = too sweet). Its balance rises linearly from 0 at intensity 0 to 5 at intensity 3, then falls linearly to 0 at intensity 5. Carbonation measures intensity (0 = flat, 5 = very fizzy); higher intensity contributes directly to the overall score, reflecting a preference for more carbonation. Consistency measures runniness (0 = thick, 5 = very runny); only `mouthfeelMatch` affects quality. Weights: taste 30%; sweetness balance, carbonation, and drinkability 15% each; consistency suitability and matching the name 10% each; value 5%. Apply the 0–3 thresholds (2.5, 3.5, 4.5) to each review's own precise score. Recommendations are explicit choices independent of the numeric score.
 
-LPK (läsk per krona) is volume divided by the review's own price, displayed in cl/kr. Optional `volumeMl` supplies volume (use the finished drink for SodaStream or fountain soda), and optional `beerPriceKr` supplies the purchase price. Missing volume or price hides LPK. These facts do not affect ratings.
+LPK (läsk per krona) is volume divided by the review's own price, displayed in cl/kr. Optional `volumeMl` supplies volume (use the finished drink for SodaStream or fountain soda), and optional `beerPriceKr` supplies the purchase price. Optional `isOnSale: true` marks a purchase on sale with an asterisk by the price. The review page explains it with `* Köpt på rea`; main-page cards show only the asterisk. Enter the price actually paid; no original price is needed. Omitted or false sale flags show no sale notice. Missing volume or price hides LPK. These facts do not affect ratings.
 
 Set `isEnergyDrink: true` for an energy drink and supply either `caffeineMgPer100Ml` or `caffeineMgPerContainer` from the label. Optional carbohydrates use `carbohydrateGPer100Ml` or `carbohydrateGPerContainer`; protein uses `proteinGPer100Ml` or `proteinGPerContainer`. Enter only one basis per nutrient, with finite nonnegative values (zero is known; omission means unknown). The generator lets you choose either basis and converts when `volumeMl` is known. Without a volume, switching basis clears the input; the site displays only the supplied basis. KPL (kolhydrat per läsk) and PPL (protein per läsk) show totals for the reviewed volume. Use `isElectrolyteDrink: true` for an electrolyte drink (a manual choice according to the label, combinable with the other types and filterable with `drinkType=electrolyte`), `isProteinDrink: true` and `sugarType: "sugar-free"` or `"sugared"` according to the label; published sugar type remains explicit. In the generator, positive caffeine/protein suggest energy/protein classifications, positive carbohydrates suggest Sockrad and zero carbohydrates suggest Sockerfri. Suggestions work in either nutrient basis and update when values are cleared. Users can override them (e.g. caffeinated cola or non-sugar carbohydrates) and restore automatic choices. Existing explicit classifications are preserved on import; false energy/protein overrides are exported as false. Home filters combine these types with AND and preserve them as repeated `drinkType` URL parameters. Optional `servingMethods` accepts multiple unique choices: `Originalförpackning`, `Glas`, `Sugrör`, `Mugg`. Packaging records what the drink was sold in; serving records how it was consumed. Optional `servingTemperature` accepts `Kylskåpskall`, `Rumstempererad`, `Varm`; `servedWithIce` is a boolean (omit when unknown). These appear on the review page and do not change ratings. Cards omit caffeine. Card types share the author row, and nutritional facts fit within the existing brand/price panel. The image retains its full area.
 
@@ -182,3 +183,33 @@ The build renders every review and legacy history path, emits `404.html` and `.n
 - Build/test jobs have read-only repository tokens and no application secrets. The privileged deployment job performs no checkout, installation, or repository script execution. Only the checked artifact from the same default-branch workflow is deployed. PR artifacts are never deployed.
 - OpenFreeMap provides external map data only after acceptance in the map overlay. The map does not request browser location, and acceptance is not persisted. Fonts are bundled locally. The site uses no analytics scripts or analytics cookies. Local bundling and CSP reduce exposure but do not make a compromised build trustworthy.
 - `source-commit.txt` records the deployed commit. To roll back, revert the problematic change through a reviewed PR and redeploy. Keep the last successful deployment and private pre-migration backups available. If a compromised dependency is suspected, isolate affected artifacts/caches, investigate, and rotate any exposed credentials before rebuilding.
+
+## Selected October 2026 upstream updates
+
+The overall score now pairs an outlined soda cup with the written 0–3 score. Its fill increases in
+three steps; an empty cup still explicitly shows 0/3. The existing logo and homepage card excerpts
+remain. Cards do not gain venue-attribute badges.
+
+The map has a larger responsive frame and keeps its review preview clear of attribution and mobile
+safe areas. Statistics add recorded spending, volume per krona, and sortable brand comparisons at the bottom of the page. Recorded spending counts one entered price per independent review; it is not a
+complete spending history. Existing campaign-price inclusion is preserved.
+
+Public pages include canonical and social metadata, with structured data for reviews. The build
+emits `/sitemap.xml`, `/robots.txt`, and `/llms.txt`; editor/demo/history/error pages are excluded from
+indexing. All discovery URLs retain `BASE_PATH` for repository-path builds. See
+[architecture and rule ownership](docs/architecture.md) for the data-flow diagram and implementation
+boundaries.
+
+`pnpm test:coverage` enforces committed unit-coverage floors for TypeScript library code: 85%
+statements/lines and 88% branches/functions. Svelte UI behavior remains covered by Playwright.
+CI runs this coverage check on the full-verification path; the review-additions exception is retained.
+
+Photo previews and responsive WebP sizes are generated during the build with pinned Sharp; the
+published site needs no image server. Original image URLs and editor downloads retain their bytes.
+The first card and detail photo load eagerly; later cards load lazily.
+
+Open `/table/` directly for the review overview: all published reviews, weighted 0–5 scores,
+0–3 ratings, score thresholds, distance to the next rating, and selectable individual assessments.
+Search and sorting by clickable column headings run locally; the full table uses a wider layout, with a selector in the individual-score heading for comparing and sorting one metric at a time. Rating-band cards count soda reviews in the current search results, excluding venue reviews. Narrow screens can scroll the table. The complete table also renders without JavaScript. Older soda and
+venue calculations are labelled separately. The page is unlisted, omitted from the sitemap, and
+marked noindex; it has no password protection and contains only already-public review data.

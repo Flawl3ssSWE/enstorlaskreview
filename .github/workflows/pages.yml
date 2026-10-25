@@ -35,7 +35,7 @@ jobs:
         if: steps.changes.outputs.review_additions != 'true'
       - run: pnpm check
         if: steps.changes.outputs.review_additions != 'true'
-      - run: pnpm test:unit --run
+      - run: pnpm test:unit --run --coverage
         if: steps.changes.outputs.review_additions != 'true'
       - run: pnpm exec playwright install --with-deps chromium
         if: steps.changes.outputs.review_additions != 'true'

@@ -55,6 +55,18 @@ async function exportJson(page: import('@playwright/test').Page) {
 	return { json, filename: download.suggestedFilename() };
 }
 
+test('sale purchases export the paid price and can be unchecked', async ({ page }) => {
+	await fillReview(page);
+	const sale = page.getByRole('checkbox', { name: 'Köpt på rea', exact: true });
+	await expect(sale).not.toBeChecked();
+	expect((await exportJson(page)).json).not.toHaveProperty('isOnSale');
+	await sale.check();
+	const { json } = await exportJson(page);
+	expect(json).toMatchObject({ isOnSale: true, beerPriceKr: 20 });
+	await sale.uncheck();
+	expect((await exportJson(page)).json.isOnSale).not.toBe(true);
+});
+
 test('generator downloads one flat review with one price and a separate compressed WebP', async ({
 	page
 }) => {
@@ -301,7 +313,7 @@ test('image positioning previews and exports the crop for new and existing revie
 	);
 	await page.goto('./?search=Testläsk&reviewer=alex');
 	await expect(page.getByRole('img', { name: 'Testläsk', exact: true })).toHaveCSS(
-		'background-position',
+		'object-position',
 		'25% 75%'
 	);
 });
@@ -589,6 +601,7 @@ test('editing keeps the existing review slug, image and creation date', async ({
 	await expect(page.getByLabel('Slug / filnamn')).toHaveAttribute('readonly', '');
 	await expect(page.locator('#container')).toHaveValue('Burk');
 	await expect(page.locator('#review-1-volume')).toHaveValue('330');
+	await expect(page.getByRole('checkbox', { name: 'Köpt på rea', exact: true })).toBeChecked();
 	await expect(page.getByLabel('Återköpspotential')).toHaveValue('5');
 	await expect(page.getByRole('checkbox', { name: /läskfavorit/ })).toBeChecked();
 	await page.getByLabel('Pris i kronor', { exact: true }).fill('27');
@@ -601,12 +614,19 @@ test('editing keeps the existing review slug, image and creation date', async ({
 		image: 'test-bar.png',
 		createdAt: '2025-01-01T12:00:00.000Z',
 		container: 'Burk',
-		beerPriceKr: 27
+		beerPriceKr: 27,
+		isOnSale: true
 	});
 	expect(json).not.toHaveProperty('reviews');
+	await page.getByRole('checkbox', { name: 'Köpt på rea', exact: true }).uncheck();
+	expect((await exportJson(page)).json.isOnSale).toBe(false);
+	await page.getByRole('checkbox', { name: 'Köpt på rea', exact: true }).check();
+	await page.getByRole('combobox', { name: 'Redigera en befintlig recension' }).selectOption('');
+	await expect(page.getByRole('checkbox', { name: 'Köpt på rea', exact: true })).not.toBeChecked();
 	await page
 		.getByRole('combobox', { name: 'Redigera en befintlig recension' })
 		.selectOption('hallonsoda');
+	await expect(page.getByRole('checkbox', { name: 'Köpt på rea', exact: true })).not.toBeChecked();
 	await expect(page.locator('#venue-atmosphere')).toHaveValue('1');
 	await expect(page.getByLabel('Återköpspotential')).toHaveValue('');
 	await expect(page.getByRole('checkbox', { name: /läskfavorit/ })).not.toBeChecked();
@@ -772,7 +792,7 @@ test('total rating preview updates with soda scores and matches exported JSON', 
 }) => {
 	await fillReview(page);
 	const preview = page.getByRole('status', { name: 'Förhandsvisning av totalbetyg' });
-	await expect(preview.getByText('2/3', { exact: true })).toBeVisible();
+	await expect(preview.getByText('1/3', { exact: true })).toBeVisible();
 	await expect(preview).toContainText('Viktad poäng: 3,3/5');
 	for (const metric of SODA_RATING_METRICS)
 		await page.locator(`#soda-${metric.key}`).fill(metric.key === 'sweetness' ? '3' : '5');
@@ -806,7 +826,7 @@ test('total rating preview updates with soda scores and matches exported JSON', 
 		.selectOption('testsoda-robin');
 	await expect(preview.getByText('0/3', { exact: true })).toBeVisible();
 	await page.getByRole('combobox', { name: 'Redigera en befintlig recension' }).selectOption('');
-	await expect(preview.getByText('2/3', { exact: true })).toBeVisible();
+	await expect(preview.getByText('1/3', { exact: true })).toBeVisible();
 });
 
 test('generator formats entered soda names into a previewed valid soda ID', async ({ page }) => {
@@ -919,7 +939,7 @@ test('home drink filters combine, survive reload and clear, with compact cards',
 	await expect(card.locator('[aria-label="Drycksfakta"]')).toHaveCount(0);
 	await expect(card.getByText(/Koffein|KPL|PPL|LPK/)).toHaveCount(0);
 	await expect(card.getByText('Märke ej angivet', { exact: true })).toHaveCount(0);
-	await expect(card.getByText('20 kr', { exact: true })).toBeVisible();
+	await expect(card.getByText('20 kr*', { exact: true })).toBeVisible();
 	expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 	await page.getByRole('checkbox', { name: 'Sockerfri', exact: true }).uncheck();
 	await page.getByRole('checkbox', { name: 'Sockrad', exact: true }).check();

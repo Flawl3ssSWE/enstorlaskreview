@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import { reviewerKey, reviewScore, selectReviewer, favoriteLabel } from '$lib/content/soda';
 	import { capitalizeAuthorName } from '$lib/utils/authors';
 	import { onMount, onDestroy } from 'svelte';
@@ -208,7 +210,7 @@
 		for (const type of drinkTypes) params.append('drinkType', type);
 		const query = params.toString();
 		const target = `${window.location.pathname}${query ? `?${query}` : ''}`;
-		window.history.replaceState({}, '', target);
+		replaceState(target, page.state);
 	};
 
 	const resetFilters = () => {
@@ -236,13 +238,6 @@
 	};
 </script>
 
-<svelte:head>
-	<title>En Stor Läsk Review</title>
-	<meta
-		name="description"
-		content="Läskrecensioner med fokus på smak, kolsyra och prisvärdhet. Hitta din nästa favorit hos En Stor Läsk Review."
-	/>
-</svelte:head>
 <section class="page-shell">
 	<div class="glass-panel p-6 sm:p-8">
 		<h1 class="text-balance max-w-3xl text-3xl font-semibold leading-tight text-ink sm:text-5xl">
@@ -422,12 +417,13 @@
 	<div
 		class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-x-5 gap-y-6 sm:grid-cols-2 lg:grid-cols-3"
 	>
-		{#each searchableBars as bar}
+		{#each searchableBars as bar, index}
 			<a
 				href={resolve('/[slug]', { slug: bar.slug }) + '/'}
 				class="row-span-2 grid grid-rows-subgrid rounded-3xl hover:no-underline focus-visible:outline-accent"
 			>
 				<Card
+					imagePriority={index === 0}
 					drink={bar}
 					distanceKm={distanceKm(userLocation.position, bar)}
 					title={bar.title}

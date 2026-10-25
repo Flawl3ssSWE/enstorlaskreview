@@ -12,6 +12,14 @@ test('soda statistics show comparable nutrient records and linked price extremes
 		'Recenserade produkter'
 	);
 	await expect(page.getByRole('heading', { name: 'Högst literpris', exact: true })).toBeVisible();
+	await expect(page.getByRole('region', { name: 'Överblick', exact: true })).toContainText(
+		'Sammanlagt angivet inköpspris'
+	);
+	const brands = page.getByRole('table', {
+		name: 'Genomsnittliga priser och volym per krona för varje märke'
+	});
+	await expect(brands.getByRole('rowheader')).toHaveText(['Pripps Blå', 'Testläsk']);
+	await expect(brands.getByRole('row').filter({ hasText: 'Pripps Blå' })).toContainText('70');
 	const caffeine = page.getByRole('region', { name: 'Mest koffein', exact: true });
 	await expect(caffeine.getByRole('region', { name: 'Per 100 ml', exact: true })).toContainText(
 		'32 mg/100 ml'
@@ -43,6 +51,23 @@ test('soda statistics show comparable nutrient records and linked price extremes
 		'Kolhydrater är inte samma sak som socker'
 	);
 	await context.close();
+});
+
+test('brand comparisons sort numerically and expose the current direction', async ({ page }) => {
+	await page.goto('statistik/');
+	const table = page.getByRole('table', {
+		name: 'Genomsnittliga priser och volym per krona för varje märke'
+	});
+	await table.getByRole('button', { name: 'Snittpris (kr)', exact: true }).click();
+	await expect(table.getByRole('rowheader')).toHaveText(['Testläsk', 'Pripps Blå']);
+	await expect(
+		table.getByRole('columnheader', { name: 'Snittpris (kr)', exact: true })
+	).toHaveAttribute('aria-sort', 'ascending');
+	await table.getByRole('button', { name: 'Snittpris (kr)', exact: true }).click();
+	await expect(table.getByRole('rowheader')).toHaveText(['Pripps Blå', 'Testläsk']);
+	await expect(
+		table.getByRole('columnheader', { name: 'Snittpris (kr)', exact: true })
+	).toHaveAttribute('aria-sort', 'descending');
 });
 
 test('statistics overview and nutrient sections fit mobile and desktop in both themes', async ({

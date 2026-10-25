@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RatingMug from '$lib/components/RatingMug.svelte';
 	import { publicationMessage } from '$lib/utils/github-review-automerge';
 	import { onDestroy, tick, untrack } from 'svelte';
 	import FileUp from '@lucide/svelte/icons/file-up';
@@ -191,6 +192,7 @@
 	let description = $state('');
 	let location = $state('');
 	let price = $state<number>();
+	let isOnSale = $state(false);
 	const suggestedTypes = $derived(
 		suggestDrinkTypes({
 			caffeineMgPer100Ml,
@@ -487,6 +489,7 @@
 			brandOverride = undefined;
 			location = '';
 			price = undefined;
+			isOnSale = false;
 			volumeMl = undefined;
 			energyOverride = undefined;
 			caffeineMgPer100Ml = undefined;
@@ -535,6 +538,7 @@
 		brandOverride = product.beerBrand ?? '';
 		location = product.location;
 		price = product.beerPriceKr;
+		isOnSale = product.isOnSale ?? false;
 		energyOverride = product.isEnergyDrink ?? null;
 		caffeineMgPer100Ml = product.caffeineMgPer100Ml;
 		caffeineMgPerContainer = product.caffeineMgPerContainer;
@@ -659,6 +663,7 @@
 			...(proteinGPerContainer !== undefined ? { proteinGPerContainer } : {}),
 			...(brand.trim() ? { beerBrand: brand.trim() } : {}),
 			...(price !== undefined ? { beerPriceKr: price } : {}),
+			...(isOnSale || existingReview?.isOnSale !== undefined ? { isOnSale } : {}),
 			...(latitude !== undefined ? { latitude } : {}),
 			...(longitude !== undefined ? { longitude } : {}),
 			imageFocusX,
@@ -740,12 +745,6 @@
 	}
 </script>
 
-<svelte:head
-	><title>Skapa recension – En Stor Läsk Review</title><meta
-		name="description"
-		content="Skapa en läskrecension, skicka som PR eller ladda ner som JSON."
-	/></svelte:head
->
 <section class="page-shell space-y-6">
 	<header class="space-y-3">
 		<div class="flex items-center justify-between gap-4">
@@ -995,8 +994,10 @@
 						class="rounded-2xl border border-accent/30 bg-surface-raised p-5"
 					>
 						<p class="text-sm font-semibold text-secondary">Recensionens totalbetyg</p>
-						{#if previewScore !== undefined}
-							<p class="mt-2 text-4xl font-bold text-accent">{previewRating}/3</p>
+						{#if previewScore !== undefined && previewRating !== undefined}
+							<div class="mt-2 text-2xl text-accent">
+								<RatingMug rating={previewRating} large />
+							</div>
 							<p class="mt-2 text-sm text-secondary">
 								Viktad poäng: {previewScore.toLocaleString('sv-SE', { maximumFractionDigits: 2 })}/5
 							</p>
@@ -1009,12 +1010,13 @@
 					<details class="text-sm text-muted">
 						<summary class="cursor-pointer">Så räknas totalbetyget</summary>
 						<p class="text-secondary">
-							Ange värden från 0 till 5. Sötma: 0 = inte söt, 3 = perfekt, 5 = för söt. Konsistens
+							Ange värden från 0 till 5. Sötma: 0 = inte söt, 3 = perfekt, 5 = för söt. Kolsyra: 0 =
+							avslagen, 5 = väldigt kolsyrad. Mer kolsyra ger högre poäng i totalbetyget. Konsistens
 							beskriver hur rinnig läsken är. Passande konsistens mäter hur väl den passar läsken.
-							För övriga betyg är 5 bäst. Använd heltal. Smak väger 30 %, sötmabalans, kolsyra och
-							drickbarhet 15 % vardera, passande konsistens och matchar namnet 10 % vardera,
-							prisvärdhet 5 %. Varje recension har en egen författare, ett eget pris och en egen
-							sida.
+							För smak, passande konsistens, drickbarhet, matchar namnet och prisvärdhet är 5 bäst.
+							Använd heltal. Smak väger 30 %, sötmabalans, kolsyra och drickbarhet 15 % vardera,
+							passande konsistens och matchar namnet 10 % vardera, prisvärdhet 5 %. Varje recension
+							har en egen författare, ett eget pris och en egen sida.
 						</p>
 					</details>
 					<RatingInputs
@@ -1127,7 +1129,13 @@
 						/></label
 					>
 					{#key existingReview?.slug ?? ''}
-						<DrinkAmountFields bind:volumeMl bind:beerPriceKr={price} prefix="review-1" required>
+						<DrinkAmountFields
+							bind:volumeMl
+							bind:beerPriceKr={price}
+							bind:isOnSale
+							prefix="review-1"
+							required
+						>
 							<ContainerSelect
 								id="container"
 								suggested={isAutomatic('container', containerOverride, String(volumeMl)) &&

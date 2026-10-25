@@ -1,18 +1,13 @@
 <script lang="ts">
+	import RatingMug from '$lib/components/RatingMug.svelte';
 	import { base } from '$app/paths';
 	import { REPURCHASE_POTENTIAL_LABELS } from '$lib/review-metadata';
 </script>
 
-<svelte:head>
-	<title>FAQ</title>
-	<meta name="description" content="Vanliga frågor om hur En Stor Läsk Review fungerar" />
-</svelte:head>
-
 <div class="page-shell">
-	<div class="glass-panel p-6 sm:p-10">
-		<h1 class="text-balance text-3xl font-semibold text-ink sm:text-4xl">Vanliga frågor</h1>
-
-		<div class="mt-10 max-w-prose space-y-10">
+	<h1 class="text-balance text-3xl font-semibold text-ink sm:text-4xl">Vanliga frågor</h1>
+	<div class="glass-panel mt-8 p-6 sm:p-8">
+		<div class="max-w-prose space-y-10">
 			<section>
 				<h2 class="text-2xl font-semibold text-ink">Vad är En Stor Läsk Review?</h2>
 				<p class="mt-2 text-secondary">
@@ -24,18 +19,24 @@
 			<section>
 				<h2 class="text-2xl font-semibold text-ink">Hur fungerar betygen?</h2>
 				<p class="mt-2 text-secondary">
-					Läsken får ett helhetsbetyg mellan 0 och 3. I nya recensioner väger smak 30 %;
-					sötmabalans, kolsyra och drickbarhet 15 % vardera; passande konsistens och hur väl smaken
-					matchar namnet 10 % vardera; prisvärdhet 5 %. Sötma 3 är perfekt och ger högst
-					balansbetyg, medan både för lite och för mycket sötma drar ned. Konsistens beskriver hur
-					rinnig läsken är; ett separat betyg bedömer hur väl konsistensen passar läsken. Äldre
-					recensioner behåller sin tidigare beräkning.
+					Läsken får ett helhetsbetyg mellan 0 och 3. Muggen fylls i tre steg och siffran visas
+					alltid bredvid. En tom mugg betyder 0/3. I nya recensioner väger smak 30 %; sötmabalans,
+					kolsyra och drickbarhet 15 % vardera; passande konsistens och hur väl smaken matchar
+					namnet 10 % vardera; prisvärdhet 5 %. Sötma 3 är perfekt och ger högst balansbetyg, medan
+					både för lite och för mycket sötma drar ned. Kolsyra beskriver hur kolsyrad drycken är: 0
+					= avslagen, 5 = väldigt kolsyrad. I totalbetyget premieras mer kolsyra. Konsistens
+					beskriver hur rinnig läsken är; ett separat betyg bedömer hur väl konsistensen passar
+					läsken. Äldre recensioner behåller sin tidigare beräkning.
 				</p>
 				<ul class="mt-3 space-y-2 text-secondary">
-					<li><strong>0/3</strong>: Inget extra.</li>
-					<li><strong>1/3</strong>: Sticker ut lite från mängden.</li>
-					<li><strong>2/3</strong>: Riktigt bra.</li>
-					<li><strong>3/3</strong>: Måste provas. Väldigt sällsynt.</li>
+					<li class="flex items-center gap-3"><RatingMug rating={0} /> Inget extra.</li>
+					<li class="flex items-center gap-3">
+						<RatingMug rating={1} /> Sticker ut lite från mängden.
+					</li>
+					<li class="flex items-center gap-3"><RatingMug rating={2} /> Riktigt bra.</li>
+					<li class="flex items-center gap-3">
+						<RatingMug rating={3} /> Måste provas. Väldigt sällsynt.
+					</li>
 				</ul>
 			</section>
 

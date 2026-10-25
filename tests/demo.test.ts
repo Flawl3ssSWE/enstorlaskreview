@@ -23,6 +23,9 @@ test('permanent demo shares the full review layout without entering published co
 		await page.setViewportSize({ width, height: 900 });
 		await page.goto('demo/');
 		await expect(page.getByText('Demosida.', { exact: true })).toBeVisible();
+		await expect(page.getByText('* Köpt på rea', { exact: true })).toBeVisible();
+		await expect(page.getByText(/happy hour/i)).toHaveCount(0);
+		await expect(page.getByText('19,5 kr*', { exact: true })).toBeVisible();
 		await expect(page.getByRole('heading', { name: demoTitle, exact: true })).toBeVisible();
 		const facts = page.getByRole('region', { name: 'Drycksfakta', exact: true });
 		await expect(facts.locator('dt')).toHaveCount(9);

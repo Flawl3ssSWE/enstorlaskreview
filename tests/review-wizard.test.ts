@@ -56,7 +56,8 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 				image: 'test-bar.png',
 				imageFocusX: 15,
 				imageFocusY: 75,
-				imageZoom: 3
+				imageZoom: 3,
+				isOnSale: true
 			});
 			await expect(
 				page.getByRole('button', { name: 'Ladda ner bild', exact: true })

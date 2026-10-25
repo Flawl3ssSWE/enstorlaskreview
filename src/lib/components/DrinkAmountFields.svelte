@@ -6,12 +6,14 @@
 	let {
 		volumeMl = $bindable(),
 		beerPriceKr = $bindable(),
+		isOnSale = $bindable(false),
 		prefix,
 		required = false,
 		children
 	}: {
 		volumeMl?: number;
 		beerPriceKr?: number;
+		isOnSale?: boolean;
 		prefix: string;
 		required?: boolean;
 		children?: import('svelte').Snippet;
@@ -102,4 +104,10 @@
 			class={inputClass}
 		/></label
 	>
+	<div class="sm:pt-8">
+		<label class="flex min-h-11 items-center gap-2">
+			<input type="checkbox" bind:checked={isOnSale} class="size-5 accent-ember" />
+			Köpt på rea
+		</label>
+	</div>
 </div>

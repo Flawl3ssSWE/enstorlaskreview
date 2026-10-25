@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import FavoriteBadge from '$lib/components/FavoriteBadge.svelte';
+	import ReviewImage from '$lib/components/ReviewImage.svelte';
+	import RatingMug from '$lib/components/RatingMug.svelte';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 	import defaultImage from '$lib/images/image.png';
 	import DrinkTypeIcons from '$lib/components/DrinkTypeIcons.svelte';
@@ -13,6 +16,7 @@
 		drink?: DrinkFacts;
 		distanceKm?: number | null;
 		title: string;
+		imagePriority?: boolean;
 		description: string;
 		rating: number;
 		favorite?: string;
@@ -29,6 +33,7 @@
 
 	let {
 		drink,
+		imagePriority = false,
 		distanceKm,
 		title,
 		description,
@@ -48,7 +53,9 @@
 	const types = $derived(drink ? drinkTypeLabels(drink) : []);
 	const resolvedImage = $derived(image === defaultImage ? defaultImage : `${base}/images/${image}`);
 
-	const beerPriceDisplay = $derived(getBeerPriceDisplay(beerPriceKr, isHappyHourPrice));
+	const beerPriceDisplay = $derived(
+		getBeerPriceDisplay(beerPriceKr, isHappyHourPrice, drink?.isOnSale)
+	);
 </script>
 
 <div
@@ -58,33 +65,33 @@
 		<div
 			class="h-full w-full transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
 		>
-			<div
-				class="h-full w-full bg-cover bg-center"
-				style={`background-image: url('${resolvedImage}'); background-position: ${imageFocusX ?? 50}% ${imageFocusY ?? 50}%; transform: scale(${imageZoom}); transform-origin: ${imageFocusX ?? 50}% ${imageFocusY ?? 50}%`}
-				role="img"
-				aria-label={title}
-			></div>
+			<ReviewImage
+				src={resolvedImage}
+				alt={title}
+				focusX={imageFocusX}
+				focusY={imageFocusY}
+				zoom={imageZoom}
+				priority={imagePriority}
+				sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw"
+				square
+			/>
 		</div>
 		<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
 		{#if distanceKm != null}<div class="absolute right-4 top-4">
 				<ReviewDistance {distanceKm} variant="photo" />
 			</div>{/if}
 		{#if favorite}
-			<p
-				class="absolute left-4 top-4 rounded-full border border-white/30 bg-black/60 px-3 py-1 text-xs font-semibold text-on-photo backdrop-blur-md"
-			>
-				{favorite}
-			</p>
+			<div class="absolute left-3 top-3">
+				<FavoriteBadge />
+			</div>
 		{/if}
 		<div class="absolute inset-x-0 bottom-0 p-5 text-on-photo">
 			<div class="flex items-end justify-between gap-3">
-				<h2 class="min-w-0 text-xl font-semibold leading-snug">{title}</h2>
+				<h2 class="min-w-0 break-words text-xl font-semibold leading-snug">{title}</h2>
 				<div
-					class="inline-flex min-w-12 shrink-0 items-baseline justify-center rounded-full bg-black/50 px-2.5 py-1 tabular-nums backdrop-blur-md"
-					aria-label={`Helhetsbetyg ${rating} av 3`}
+					class="inline-flex shrink-0 items-center justify-center rounded-full bg-black/50 px-2.5 py-1 tabular-nums backdrop-blur-md"
 				>
-					<span class="text-lg font-semibold leading-none">{rating}</span>
-					<span class="ml-1 text-xs text-on-photo/80">/3</span>
+					<RatingMug {rating} />
 				</div>
 			</div>
 			<p class="mt-1 text-sm text-on-photo/85">{location}</p>
@@ -106,7 +113,9 @@
 				</div>
 			</div>
 		{/if}
-		{#if beerPriceDisplay?.note}<p class="text-xs text-muted">{beerPriceDisplay.note}</p>{/if}
+		{#if beerPriceDisplay?.note && !drink?.isOnSale}<p class="text-xs text-muted">
+				{beerPriceDisplay.note}
+			</p>{/if}
 		<ReviewDescription {description} variant="preview" />
 	</div>
 </div>

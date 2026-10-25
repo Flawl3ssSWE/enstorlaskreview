@@ -2,9 +2,6 @@
 	import { resolve } from '$app/paths';
 </script>
 
-<svelte:head
-	><title>419 Läsken är inte recenserad</title><meta name="robots" content="noindex" /></svelte:head
->
 <div class="page-shell">
 	<div
 		class="rounded-3xl border border-line bg-surface px-6 py-12 text-center backdrop-blur-xl sm:p-12"

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import Navbar from '../lib/components/Navbar.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import '@fontsource/archivo/latin-500.css';
 	import '@fontsource/archivo/latin-600.css';
 	import '@fontsource/archivo/latin-700.css';
@@ -24,6 +25,7 @@
 	/>
 </svelte:head>
 
+<Seo />
 <Navbar />
 
 <main class="flex-1">

@@ -5,7 +5,7 @@
 	"image": "cuba-cola-zero-anton.webp",
 	"location": "",
 	"createdAt": "2026-10-07T10:32:57.832Z",
-	"updatedAt": "2026-10-07T10:32:57.832Z",
+	"updatedAt": "2026-10-25T21:39:03.000Z",
 	"author": "Anton",
 	"description": "Den må vara en klassiker, men smaken är lite för svag i förhållande till kolsyran.",
 	"favorite": false,
@@ -28,5 +28,7 @@
 	"beerPriceKr": 6.9,
 	"imageFocusX": 50,
 	"imageFocusY": 59,
-	"imageZoom": 1.15
+	"imageZoom": 1.15,
+	"container": "Burk",
+	"volumeMl": 330
 }

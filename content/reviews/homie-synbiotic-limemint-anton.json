@@ -25,6 +25,7 @@
 	"caffeineMgPer100Ml": 30.3,
 	"beerBrand": "Homie",
 	"beerPriceKr": 12.5,
+	"isOnSale": true,
 	"servingMethods": ["Originalförpackning"],
 	"sugarType": "sugar-free",
 	"servingTemperature": "Kylskåpskall",

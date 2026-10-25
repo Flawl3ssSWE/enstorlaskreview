@@ -74,7 +74,10 @@
 	>
 		<a href={resolve('/')} class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl">
 			<img
-				src={`${base}/logo.png`}
+				src={`${base}/image-variants/logo/80.webp`}
+				width="40"
+				height="40"
+				decoding="async"
 				alt="En Stor Läsk Review – hem"
 				class="size-10 shrink-0 object-contain"
 			/>

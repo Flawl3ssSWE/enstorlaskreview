@@ -70,7 +70,7 @@ export const SODA_RATING_METRICS = [
 	{
 		key: 'carbonation',
 		label: 'Kolsyra',
-		description: 'Hur väl passar kolsyran läsken?',
+		description: 'Hur kolsyrad är drycken? 0 = avslagen, 5 = väldigt kolsyrad.',
 		weight: 0.15
 	},
 	{
@@ -141,3 +141,11 @@ export const DRINK_TYPE_FILTERS = [
 
 export const SERVING_METHODS = ['Originalförpackning', 'Glas', 'Sugrör', 'Mugg'] as const;
 export const SERVING_TEMPERATURES = ['Kylskåpskall', 'Rumstempererad', 'Varm'] as const;
+
+/** Lower bounds for the published 0–3 rating, shared with the review overview. */
+export const OVERALL_RATING_LEVELS = [
+	{ rating: 0, minimum: 0 },
+	{ rating: 1, minimum: 2.5 },
+	{ rating: 2, minimum: 3.5 },
+	{ rating: 3, minimum: 4.5 }
+] as const;

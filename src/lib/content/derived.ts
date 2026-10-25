@@ -7,7 +7,7 @@ import type {
 	NutrientStatisticProduct
 } from '../types/review-statistics';
 import { isValidBeerPriceKr } from '../utils/price';
-import { drinkVolumeMl, nutrientAmounts } from '../utils/drink-facts';
+import { drinkVolumeMl, laskPerKrona, nutrientAmounts } from '../utils/drink-facts';
 import { SODA_RATING_METRICS } from '../review-metadata';
 import { sodaScore, reviewerKey } from './soda';
 
@@ -57,6 +57,32 @@ export function buildReviewStatistics(reviews: PublicReview[]): PublicReviewStat
 					}
 				];
 	});
+	const brandReviews = new Map<string, { brand: string; reviews: PublicReview[] }>();
+	for (const review of reviews) {
+		const brand = review.beerBrand?.trim();
+		if (!brand) continue;
+		const key = reviewerKey(brand);
+		const group = brandReviews.get(key);
+		if (group) group.reviews.push(review);
+		else brandReviews.set(key, { brand, reviews: [review] });
+	}
+	const brands = [...brandReviews.values()]
+		.map(({ brand, reviews: entries }) => {
+			const prices = entries.filter((review) => isValidBeerPriceKr(review.beerPriceKr));
+			const comparable = prices.filter((review) => drinkVolumeMl(review) !== undefined);
+			return {
+				brand,
+				reviewCount: entries.length,
+				priceReviewCount: prices.length,
+				unitPriceReviewCount: comparable.length,
+				averagePrice: average(prices.map((review) => review.beerPriceKr!)),
+				averagePricePerLiter: average(
+					comparable.map((review) => (review.beerPriceKr! * 1000) / drinkVolumeMl(review)!)
+				),
+				averageClPerKrona: average(comparable.map((review) => laskPerKrona(review)!))
+			};
+		})
+		.sort((a, b) => a.brand.localeCompare(b.brand, 'sv'));
 	const extremes = <T extends ReviewStatisticProduct>(
 		products: T[],
 		direction: 'min' | 'max'
@@ -136,8 +162,12 @@ export function buildReviewStatistics(reviews: PublicReview[]): PublicReviewStat
 		averageSodaScore: average(scored.map((product) => product.value)),
 		priceReviewCount: priced.length,
 		averagePrice: average(priced.map((review) => review.beerPriceKr!)),
+		totalRecordedSpend:
+			priced.reduce((sum, review) => sum + Math.round(review.beerPriceKr! * 10), 0) / 10,
 		unitPriceReviewCount: unitPrices.length,
 		averagePricePerLiter: average(unitPrices.map((product) => product.value)),
+		averageClPerKrona: average(priced.flatMap((review) => laskPerKrona(review) ?? [])),
+		brands,
 		repurchaseReviewCount: repurchases.length,
 		averageRepurchasePotential: average(repurchases),
 		favoriteReviewCount: favorites.length,

@@ -46,7 +46,7 @@
 	"proteinGPer100Ml": 2,
 	"beerBrand": "Demoläsk",
 	"beerPriceKr": 19.5,
-	"isHappyHourPrice": true,
+	"isOnSale": true,
 	"latitude": 57.7089,
 	"longitude": 11.9746
 }

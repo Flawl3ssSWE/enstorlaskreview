@@ -80,6 +80,20 @@ test('review image endpoints publish the exact referenced bytes at stable URLs',
 	expect(image.status()).toBe(200);
 	expect(image.headers()['content-type']).toBe('image/png');
 	expect(await image.body()).toEqual(await readFile('tests/fixtures/images/test-bar.png'));
+	for (const variant of ['preview.webp', '480.webp', '960.webp']) {
+		const response = await request.get(`image-variants/test-bar.png/${variant}`);
+		expect(response.ok()).toBe(true);
+		expect(response.headers()['content-type']).toBe('image/webp');
+		const bytes = await response.body();
+		expect(bytes.toString('ascii', 0, 4)).toBe('RIFF');
+		expect(bytes.toString('ascii', 8, 12)).toBe('WEBP');
+	}
+	for (const path of [
+		'image-variants/unreferenced.png/preview.webp',
+		'image-variants/test-bar.png/100000.webp'
+	]) {
+		expect((await request.get(path)).status()).toBe(404);
+	}
 	const missing = await request.get('images/unreferenced.png');
 	expect(missing.status()).toBe(404);
 });
@@ -93,7 +107,7 @@ test('navigation, statistics, and About work without server actions', async ({ p
 	await expect(
 		page.getByText('Snittbetyg för läsk', { exact: true }).locator('../..')
 	).toContainText('3,5 / 5');
-	await expect(page.getByRole('heading', { name: 'Läskens betygsprofil' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Läskens snittbetyg' })).toBeVisible();
 	await expect(
 		page
 			.getByRole('heading', { name: 'Högst läskbetyg' })
@@ -129,7 +143,7 @@ test('soda branding and icons load from the configured base path', async ({ page
 	await page.goto('./');
 	await expect(page.getByRole('link', { name: /En Stor Läsk Review/ })).toBeVisible();
 	const logo = page.getByRole('img', { name: 'En Stor Läsk Review – hem' });
-	await expect(logo).toHaveAttribute('src', `${basePath}/logo.png`);
+	await expect(logo).toHaveAttribute('src', `${basePath}/image-variants/logo/80.webp`);
 	expect(await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(
 		0
 	);
@@ -326,4 +340,29 @@ test('packaging and favorite follow the selected reviewer', async ({ page }) => 
 	await expect(page.locator('main a[href*="testsoda"]')).toHaveCount(0);
 	await page.getByRole('checkbox', { name: 'Endast läskfavoriter' }).uncheck();
 	await expect(page.locator('main a[href*="testsoda"]')).toHaveCount(1);
+});
+
+test('a small preview remains visible while its responsive photo is loading', async ({ page }) => {
+	const pending: Array<() => void> = [];
+	await page.route('**/image-variants/test-bar.png/{480,960}.webp', async (route) => {
+		await new Promise<void>((resolve) => pending.push(resolve));
+		await route.continue();
+	});
+	try {
+		await page.goto('testsoda/', { waitUntil: 'domcontentloaded' });
+		const photo = page.getByRole('img', { name: 'Testläsk', exact: true });
+		const preview = photo.locator('..').locator('img[aria-hidden="true"]');
+		await expect(preview).toBeVisible();
+		await expect(preview).toHaveJSProperty('complete', true);
+		expect(
+			await preview.evaluate((image) => (image as HTMLImageElement).naturalWidth)
+		).toBeGreaterThan(0);
+		await expect(photo).toHaveJSProperty('complete', false);
+	} finally {
+		for (const release of pending) release();
+	}
+	await expect(page.getByRole('img', { name: 'Testläsk', exact: true })).toHaveJSProperty(
+		'complete',
+		true
+	);
 });

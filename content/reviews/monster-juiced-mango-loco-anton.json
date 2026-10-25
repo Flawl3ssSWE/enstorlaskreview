@@ -31,6 +31,7 @@
 	"carbohydrateGPerContainer": 60,
 	"beerBrand": "Monster",
 	"beerPriceKr": 10,
+	"isOnSale": true,
 	"imageFocusX": 50,
 	"imageFocusY": 64.1104294478527,
 	"imageZoom": 1

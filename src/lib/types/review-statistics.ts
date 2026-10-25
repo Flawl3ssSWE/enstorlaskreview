@@ -21,6 +21,16 @@ export interface NutrientStatistic {
 	highestPerContainer: NutrientStatisticProduct[];
 }
 
+export interface BrandStatistic {
+	brand: string;
+	reviewCount: number;
+	priceReviewCount: number;
+	unitPriceReviewCount: number;
+	averagePrice: number | null;
+	averagePricePerLiter: number | null;
+	averageClPerKrona: number | null;
+}
+
 export interface PublicReviewStatistics {
 	totalReviews: number;
 	productCount: number;
@@ -29,8 +39,11 @@ export interface PublicReviewStatistics {
 	averageSodaScore: number | null;
 	priceReviewCount: number;
 	averagePrice: number | null;
+	totalRecordedSpend: number;
 	unitPriceReviewCount: number;
 	averagePricePerLiter: number | null;
+	averageClPerKrona: number | null;
+	brands: BrandStatistic[];
 	repurchaseReviewCount: number;
 	averageRepurchasePotential: number | null;
 	favoriteReviewCount: number;

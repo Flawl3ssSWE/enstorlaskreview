@@ -6,23 +6,18 @@
 	const mapData = $derived(data.map);
 </script>
 
-<svelte:head>
-	<title>Karta</title>
-	<meta name="description" content="Se var vi har provat läsk och läs recensionerna på kartan." />
-</svelte:head>
-
 <section class="page-shell">
 	<div class="mx-auto w-full max-w-6xl">
-		<div class="space-y-4">
-			<h1 class="text-balance text-3xl font-semibold leading-tight text-ink sm:text-5xl">
+		<div class="space-y-2">
+			<h1 class="text-balance text-3xl font-semibold leading-tight text-ink sm:text-4xl">
 				Upptäck läsk på kartan.
 			</h1>
-			<div class="mt-4 text-base leading-relaxed text-secondary">
+			<div class="text-base leading-relaxed text-secondary">
 				<p>Här har vi provat läsk. Tryck på en punkt för att läsa recensionen.</p>
 			</div>
 		</div>
 
-		<div class="mt-6">
+		<div class="mt-4">
 			<ReviewMap markers={mapData.markers} />
 		</div>
 
