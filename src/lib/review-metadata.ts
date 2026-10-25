@@ -70,7 +70,7 @@ export const SODA_RATING_METRICS = [
 	{
 		key: 'carbonation',
 		label: 'Kolsyra',
-		description: 'Hur väl passar kolsyran läsken?',
+		description: 'Hur kolsyrad är drycken? 0 = avslagen, 5 = väldigt kolsyrad.',
 		weight: 0.15
 	},
 	{

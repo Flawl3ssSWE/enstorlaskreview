@@ -1010,12 +1010,13 @@
 					<details class="text-sm text-muted">
 						<summary class="cursor-pointer">Så räknas totalbetyget</summary>
 						<p class="text-secondary">
-							Ange värden från 0 till 5. Sötma: 0 = inte söt, 3 = perfekt, 5 = för söt. Konsistens
+							Ange värden från 0 till 5. Sötma: 0 = inte söt, 3 = perfekt, 5 = för söt. Kolsyra: 0 =
+							avslagen, 5 = väldigt kolsyrad. Mer kolsyra ger högre poäng i totalbetyget. Konsistens
 							beskriver hur rinnig läsken är. Passande konsistens mäter hur väl den passar läsken.
-							För övriga betyg är 5 bäst. Använd heltal. Smak väger 30 %, sötmabalans, kolsyra och
-							drickbarhet 15 % vardera, passande konsistens och matchar namnet 10 % vardera,
-							prisvärdhet 5 %. Varje recension har en egen författare, ett eget pris och en egen
-							sida.
+							För smak, passande konsistens, drickbarhet, matchar namnet och prisvärdhet är 5 bäst.
+							Använd heltal. Smak väger 30 %, sötmabalans, kolsyra och drickbarhet 15 % vardera,
+							passande konsistens och matchar namnet 10 % vardera, prisvärdhet 5 %. Varje recension
+							har en egen författare, ett eget pris och en egen sida.
 						</p>
 					</details>
 					<RatingInputs

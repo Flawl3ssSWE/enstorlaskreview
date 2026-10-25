@@ -23,9 +23,10 @@
 					alltid bredvid. En tom mugg betyder 0/3. I nya recensioner väger smak 30 %; sötmabalans,
 					kolsyra och drickbarhet 15 % vardera; passande konsistens och hur väl smaken matchar
 					namnet 10 % vardera; prisvärdhet 5 %. Sötma 3 är perfekt och ger högst balansbetyg, medan
-					både för lite och för mycket sötma drar ned. Konsistens beskriver hur rinnig läsken är;
-					ett separat betyg bedömer hur väl konsistensen passar läsken. Äldre recensioner behåller
-					sin tidigare beräkning.
+					både för lite och för mycket sötma drar ned. Kolsyra beskriver hur kolsyrad drycken är: 0
+					= avslagen, 5 = väldigt kolsyrad. I totalbetyget premieras mer kolsyra. Konsistens
+					beskriver hur rinnig läsken är; ett separat betyg bedömer hur väl konsistensen passar
+					läsken. Äldre recensioner behåller sin tidigare beräkning.
 				</p>
 				<ul class="mt-3 space-y-2 text-secondary">
 					<li class="flex items-center gap-3"><RatingMug rating={0} /> Inget extra.</li>

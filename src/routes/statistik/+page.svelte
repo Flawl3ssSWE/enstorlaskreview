@@ -286,7 +286,8 @@
 			<section class="glass-panel mt-6 p-6 sm:p-8">
 				<h2 class="text-2xl font-semibold text-ink">Läskens snittbetyg</h2>
 				<p class="mt-2 text-sm leading-relaxed text-secondary">
-					Snitt på skalan 0–5. Sötma och konsistens beskriver egenskaper, inte kvalitet.
+					Snitt på skalan 0–5. Sötma, kolsyra och konsistens beskriver intensitet. Kolsyra går från
+					0 = avslagen till 5 = väldigt kolsyrad. I totalbetyget premieras mer kolsyra.
 				</p>
 				<dl class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
 					{#each data.statistics.ratingAverages as metric}
