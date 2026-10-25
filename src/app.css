@@ -124,7 +124,7 @@ input[type='checkbox'][data-automatic='true'] {
 			radial-gradient(900px 500px at 10% -10%, var(--glow-red), transparent 60%),
 			radial-gradient(700px 500px at 110% 10%, var(--glow-rose), transparent 60%),
 			linear-gradient(180deg, var(--page-top), var(--page-bottom));
-		min-height: 100vh;
+		min-height: 100dvh;
 	}
 
 	h1,

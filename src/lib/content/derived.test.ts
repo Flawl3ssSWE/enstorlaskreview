@@ -15,6 +15,9 @@ describe('public derived content', () => {
 			brandCount: 0,
 			averageSodaScore: null,
 			averagePrice: null,
+			totalRecordedSpend: 0,
+			averageClPerKrona: null,
+			brands: [],
 			averagePricePerLiter: null,
 			favoritePercentage: null,
 			averageRepurchasePotential: null,
@@ -28,6 +31,46 @@ describe('public derived content', () => {
 			)
 		).toBe(true);
 		expect(buildReviewMap([])).toEqual({ totalReviews: 0, markers: [] });
+	});
+	it('counts one recorded purchase per independent review, including campaign prices and coauthors', () => {
+		const statistics = buildReviewStatistics([
+			{ ...soda, beerPriceKr: 10.1, coAuthors: ['Robin', 'Kim'], isOnSale: true },
+			{ ...otherSoda, beerPriceKr: 20.2, isHappyHourPrice: true },
+			{ ...review, beerPriceKr: undefined }
+		]);
+		expect(statistics.totalRecordedSpend).toBe(30.3);
+		expect(statistics.priceReviewCount).toBe(2);
+	});
+	it('groups brands without case or whitespace differences and keeps missing data out of brand averages', () => {
+		const statistics = buildReviewStatistics([
+			{ ...soda, beerBrand: ' Pepsi ', beerPriceKr: 10, volumeMl: 250 },
+			{ ...otherSoda, beerBrand: 'pepsi', beerPriceKr: 20, volumeMl: 1000 },
+			{ ...review, beerBrand: 'PEPSI', beerPriceKr: undefined, volumeMl: 500 },
+			{ ...review, slug: 'utan-volym', beerBrand: 'Pepsi', beerPriceKr: 30 },
+			{ ...review, slug: 'utan-pris', beerBrand: 'Äpple', beerPriceKr: undefined },
+			{ ...review, slug: 'utan-marke', beerBrand: '  ', beerPriceKr: 40 }
+		]);
+		expect(statistics.brands).toEqual([
+			{
+				brand: 'Pepsi',
+				reviewCount: 4,
+				priceReviewCount: 3,
+				unitPriceReviewCount: 2,
+				averagePrice: 20,
+				averagePricePerLiter: 30,
+				averageClPerKrona: 3.75
+			},
+			{
+				brand: 'Äpple',
+				reviewCount: 1,
+				priceReviewCount: 0,
+				unitPriceReviewCount: 0,
+				averagePrice: null,
+				averagePricePerLiter: null,
+				averageClPerKrona: null
+			}
+		]);
+		expect(statistics.averageClPerKrona).toBe(3.75);
 	});
 	it('counts products once and uses soda scores without mixing in venue scores', () => {
 		const statistics = buildReviewStatistics([

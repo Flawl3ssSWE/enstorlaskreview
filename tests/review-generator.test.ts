@@ -313,7 +313,7 @@ test('image positioning previews and exports the crop for new and existing revie
 	);
 	await page.goto('./?search=Testläsk&reviewer=alex');
 	await expect(page.getByRole('img', { name: 'Testläsk', exact: true })).toHaveCSS(
-		'background-position',
+		'object-position',
 		'25% 75%'
 	);
 });

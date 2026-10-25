@@ -2,7 +2,7 @@ import type { PublicReview } from '../types/bar-review';
 import { formatAuthors } from '../utils/authors';
 import { renderReviewMarkdown } from '../utils/review-markdown';
 
-const origin = 'https://enstorlaskreview.se';
+import { SITE_ORIGIN } from './seo';
 
 function escapeXml(value: string): string {
 	return value.replace(/[&<>"']/g, (character) => {
@@ -12,7 +12,7 @@ function escapeXml(value: string): string {
 
 /** Serializes validated public content; review URLs provide stable item identities. */
 export function serializeReviewsRss(reviews: readonly PublicReview[], base: string): string {
-	const siteUrl = `${origin}${base}/`;
+	const siteUrl = `${SITE_ORIGIN}${base}/`;
 	const sorted = [...reviews].sort(
 		(a, b) =>
 			Date.parse(b.createdAt) - Date.parse(a.createdAt) ||

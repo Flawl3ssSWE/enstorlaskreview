@@ -7,10 +7,6 @@
 	);
 </script>
 
-<svelte:head>
-	<title>{heading}</title>
-</svelte:head>
-
 <div class="page-shell">
 	<div
 		class="rounded-3xl border border-line bg-surface px-6 py-12 text-center backdrop-blur-xl sm:p-12"

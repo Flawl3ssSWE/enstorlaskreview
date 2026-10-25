@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RatingMug from '$lib/components/RatingMug.svelte';
 	import { publicationMessage } from '$lib/utils/github-review-automerge';
 	import { onDestroy, tick, untrack } from 'svelte';
 	import FileUp from '@lucide/svelte/icons/file-up';
@@ -744,12 +745,6 @@
 	}
 </script>
 
-<svelte:head
-	><title>Skapa recension – En Stor Läsk Review</title><meta
-		name="description"
-		content="Skapa en läskrecension, skicka som PR eller ladda ner som JSON."
-	/></svelte:head
->
 <section class="page-shell space-y-6">
 	<header class="space-y-3">
 		<div class="flex items-center justify-between gap-4">
@@ -999,8 +994,10 @@
 						class="rounded-2xl border border-accent/30 bg-surface-raised p-5"
 					>
 						<p class="text-sm font-semibold text-secondary">Recensionens totalbetyg</p>
-						{#if previewScore !== undefined}
-							<p class="mt-2 text-4xl font-bold text-accent">{previewRating}/3</p>
+						{#if previewScore !== undefined && previewRating !== undefined}
+							<div class="mt-2 text-2xl text-accent">
+								<RatingMug rating={previewRating} large />
+							</div>
 							<p class="mt-2 text-sm text-secondary">
 								Viktad poäng: {previewScore.toLocaleString('sv-SE', { maximumFractionDigits: 2 })}/5
 							</p>

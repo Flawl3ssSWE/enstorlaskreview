@@ -77,7 +77,7 @@ describe('CI trust boundary', () => {
 		for (const command of [
 			'pnpm lint',
 			'pnpm check',
-			'pnpm test:unit --run',
+			'pnpm test:unit --run --coverage',
 			'pnpm exec playwright install --with-deps chromium',
 			'pnpm test:integration'
 		])

@@ -13,6 +13,7 @@ pnpm validate:content
 pnpm check
 pnpm lint
 pnpm test:unit --run
+pnpm test:coverage
 pnpm exec playwright install chromium
 pnpm test:integration
 pnpm build
@@ -182,3 +183,27 @@ The build renders every review and legacy history path, emits `404.html` and `.n
 - Build/test jobs have read-only repository tokens and no application secrets. The privileged deployment job performs no checkout, installation, or repository script execution. Only the checked artifact from the same default-branch workflow is deployed. PR artifacts are never deployed.
 - OpenFreeMap provides external map data only after acceptance in the map overlay. The map does not request browser location, and acceptance is not persisted. Fonts are bundled locally. The site uses no analytics scripts or analytics cookies. Local bundling and CSP reduce exposure but do not make a compromised build trustworthy.
 - `source-commit.txt` records the deployed commit. To roll back, revert the problematic change through a reviewed PR and redeploy. Keep the last successful deployment and private pre-migration backups available. If a compromised dependency is suspected, isolate affected artifacts/caches, investigate, and rotate any exposed credentials before rebuilding.
+
+## Selected October 2026 upstream updates
+
+The overall score now pairs an outlined soda cup with the written 0–3 score. Its fill increases in
+three steps; an empty cup still explicitly shows 0/3. The existing logo and homepage card excerpts
+remain. Cards do not gain venue-attribute badges.
+
+The map has a larger responsive frame and keeps its review preview clear of attribution and mobile
+safe areas. Statistics add recorded spending, volume per krona, and sortable brand comparisons at the bottom of the page. Recorded spending counts one entered price per independent review; it is not a
+complete spending history. Existing campaign-price inclusion is preserved.
+
+Public pages include canonical and social metadata, with structured data for reviews. The build
+emits `/sitemap.xml`, `/robots.txt`, and `/llms.txt`; editor/demo/history/error pages are excluded from
+indexing. All discovery URLs retain `BASE_PATH` for repository-path builds. See
+[architecture and rule ownership](docs/architecture.md) for the data-flow diagram and implementation
+boundaries.
+
+`pnpm test:coverage` enforces committed unit-coverage floors for TypeScript library code: 85%
+statements/lines and 88% branches/functions. Svelte UI behavior remains covered by Playwright.
+CI runs this coverage check on the full-verification path; the review-additions exception is retained.
+
+Photo previews and responsive WebP sizes are generated during the build with pinned Sharp; the
+published site needs no image server. Original image URLs and editor downloads retain their bytes.
+The first card and detail photo load eagerly; later cards load lazily.
