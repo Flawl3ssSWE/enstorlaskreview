@@ -1,0 +1,42 @@
+{
+	"title": "Three Cents Cherry Soda",
+	"sodaId": "three-cents-cherry-soda",
+	"slug": "three-cents-cherry-soda-anton",
+	"image": "three-cents-cherry-soda-anton.webp",
+	"location": "Drottningtorget 10, 411 03 Göteborg",
+	"createdAt": "2026-10-23T21:38:45.202Z",
+	"updatedAt": "2026-10-23T21:38:45.202Z",
+	"author": "Anton",
+	"description": "Smakar klassisk körsbärssmak som brukar typ vara på körsbärsgodis.\n\nPris lite högre för den var i en bar, serverades rumstempererad. Mycket kolsyra försvann på grund av skumningen från isen som då även späder smaken. Fanns inte heller så många läsker, klassiska pepsi utbudet och denna.",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaRatings": {
+		"taste": 3,
+		"sweetness": 4,
+		"carbonation": 2,
+		"mouthfeel": 5,
+		"mouthfeelMatch": 5,
+		"drinkability": 4,
+		"matchesName": 5,
+		"value": 2
+	},
+	"container": "Flaska",
+	"volumeMl": 200,
+	"venueRatings": {
+		"atmosphere": 4,
+		"service": 2,
+		"selection": 3,
+		"cleanliness": 4,
+		"soundLevel": 3
+	},
+	"sugarType": "sugared",
+	"servingMethods": ["Glas"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": true,
+	"carbohydrateGPer100Ml": 9.9,
+	"beerBrand": "Three Cents",
+	"beerPriceKr": 45,
+	"imageFocusX": 50,
+	"imageFocusY": 50.30674846625762,
+	"imageZoom": 1
+}
