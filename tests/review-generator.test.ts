@@ -792,7 +792,7 @@ test('total rating preview updates with soda scores and matches exported JSON', 
 }) => {
 	await fillReview(page);
 	const preview = page.getByRole('status', { name: 'Förhandsvisning av totalbetyg' });
-	await expect(preview.getByText('2/3', { exact: true })).toBeVisible();
+	await expect(preview.getByText('1/3', { exact: true })).toBeVisible();
 	await expect(preview).toContainText('Viktad poäng: 3,3/5');
 	for (const metric of SODA_RATING_METRICS)
 		await page.locator(`#soda-${metric.key}`).fill(metric.key === 'sweetness' ? '3' : '5');
@@ -826,7 +826,7 @@ test('total rating preview updates with soda scores and matches exported JSON', 
 		.selectOption('testsoda-robin');
 	await expect(preview.getByText('0/3', { exact: true })).toBeVisible();
 	await page.getByRole('combobox', { name: 'Redigera en befintlig recension' }).selectOption('');
-	await expect(preview.getByText('2/3', { exact: true })).toBeVisible();
+	await expect(preview.getByText('1/3', { exact: true })).toBeVisible();
 });
 
 test('generator formats entered soda names into a previewed valid soda ID', async ({ page }) => {

@@ -73,7 +73,7 @@ describe('public search metadata', () => {
 		expect(reviewStructuredData(legacy, '').itemReviewed['@type']).toBe('LocalBusiness');
 	});
 
-	it.each(['/demo', '/skapa', '/skapa/wizard', '/[slug]/history', '/404', null])(
+	it.each(['/table', '/demo', '/skapa', '/skapa/wizard', '/[slug]/history', '/404', null])(
 		'keeps utility route %s out of the index and structured reviews',
 		(route) => {
 			const seo = pageSeo(route, '', soda);

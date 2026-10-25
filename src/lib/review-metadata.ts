@@ -141,3 +141,11 @@ export const DRINK_TYPE_FILTERS = [
 
 export const SERVING_METHODS = ['Originalförpackning', 'Glas', 'Sugrör', 'Mugg'] as const;
 export const SERVING_TEMPERATURES = ['Kylskåpskall', 'Rumstempererad', 'Varm'] as const;
+
+/** Lower bounds for the published 0–3 rating, shared with the review overview. */
+export const OVERALL_RATING_LEVELS = [
+	{ rating: 0, minimum: 0 },
+	{ rating: 1, minimum: 2.5 },
+	{ rating: 2, minimum: 3.5 },
+	{ rating: 3, minimum: 4.5 }
+] as const;

@@ -19,6 +19,7 @@ const RESERVED_SLUGS = new Set([
 	'karta',
 	'statistik',
 	'admin',
+	'table',
 	'login',
 	'images',
 	'404',

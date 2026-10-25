@@ -43,6 +43,10 @@ export function pageSeo(
 			`Läskstatistik – ${SITE_NAME}`,
 			'Jämför läskbetyg, literpriser, märken och innehåll från våra publicerade recensioner.'
 		],
+		'/table': [
+			`Recensionsöversikt – ${SITE_NAME}`,
+			'Översikt över recensionernas poäng och betygsgränser.'
+		],
 		'/demo': [
 			`Demorecension – ${SITE_NAME}`,
 			'En påhittad läsk som visar hur recensionerna fungerar.'
