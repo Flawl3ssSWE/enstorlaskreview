@@ -2,6 +2,43 @@ import { expect, test } from '@playwright/test';
 
 const basePath = process.env.BASE_PATH ?? '';
 
+test('calibration sliders update scores, ratings, counts and sorting and can be reset', async ({
+	page
+}) => {
+	await page.goto('table/');
+	await page.getByText('Kalibrera poängen', { exact: true }).click();
+	const soda = page.locator('tr[data-review="testsoda"]');
+	const legacy = page.locator('tr[data-review="hallonsoda"]');
+	const originalLegacy = await legacy.innerText();
+	const thresholds = page.getByRole('region', { name: 'Gränser för helhetsbetyg' });
+	const panel = page
+		.locator('details')
+		.filter({ has: page.getByRole('slider', { name: /^Smak/ }) });
+	for (const slider of await panel.getByRole('slider').all()) await slider.fill('0');
+	await expect(panel).toContainText('När alla vikter är 0 används standardvikterna.');
+	await expect(soda.getByRole('img', { name: 'Helhetsbetyg 3 av 3' })).toBeVisible();
+	const sweetness = panel.getByRole('slider', { name: /^Sötmabalans/ });
+	await sweetness.fill('100');
+	await expect(soda).toContainText('Kalibrerad läskmodell');
+	await expect(soda.getByRole('img', { name: 'Helhetsbetyg 3 av 3' })).toBeVisible();
+	expect(await legacy.innerText()).toBe(originalLegacy);
+	await expect(thresholds.locator('[data-rating-band="0"]')).toContainText('1 läskrecension');
+	await expect(thresholds.locator('[data-rating-band="2"]')).toContainText('1 läskrecension');
+	await expect(page.locator('tr[data-review]').last()).toContainText('Robin');
+	await sweetness.focus();
+	await page.keyboard.press('ArrowLeft');
+	await expect(sweetness).toHaveValue('99');
+	await page.setViewportSize({ width: 375, height: 812 });
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+	await panel.getByRole('button', { name: 'Återställ standardvikter' }).click();
+	await expect(sweetness).toHaveValue('15');
+	await expect(soda).toContainText('Viktad läskmodell');
+	await expect(thresholds.locator('[data-rating-band="2"]')).toContainText('1 läskrecension');
+	await page.reload();
+	await page.getByText('Kalibrera poängen', { exact: true }).click();
+	await expect(sweetness).toHaveValue('15');
+});
+
 test('overview renders all published reviews and shared thresholds without JavaScript', async ({
 	browser,
 	request

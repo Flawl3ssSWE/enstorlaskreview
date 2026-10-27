@@ -6,11 +6,19 @@
 		REVIEW_RATING_METRICS
 	} from '$lib/review-metadata';
 	import RatingMug from '$lib/components/RatingMug.svelte';
+	import {
+		CALIBRATION_METRICS,
+		calibrateOverview,
+		defaultCalibrationWeights
+	} from '$lib/content/score-calibration';
 	import { formatAuthors } from '$lib/utils/authors';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 	let search = $state('');
+	let weights = $state(defaultCalibrationWeights());
+	const weightTotal = $derived(CALIBRATION_METRICS.reduce((sum, { key }) => sum + weights[key], 0));
+	const calibrated = $derived(data.reviews.map((review) => calibrateOverview(review, weights)));
 	let selectedMetric = $state('taste');
 	const metricOptions = [
 		...SODA_RATING_METRICS.map(({ key, label }) => ({ key, label })),
@@ -55,7 +63,7 @@
 	}
 	const number = (value: number) => value.toLocaleString('sv-SE', { maximumFractionDigits: 3 });
 	const rows = $derived(
-		data.reviews
+		calibrated
 			.filter((review) =>
 				`${review.title} ${formatAuthors(review.author, review.coAuthors)}`
 					.toLocaleLowerCase('sv')
@@ -147,6 +155,47 @@
 			</p>
 		</details>
 	</section>
+
+	<details class="glass-panel p-5 sm:p-6">
+		<summary class="min-h-11 cursor-pointer py-2 text-xl font-semibold text-ink">
+			Kalibrera poängen
+		</summary>
+		<p id="calibration-help" class="mt-3 max-w-3xl text-sm text-secondary">
+			Prova olika procentvikter för den viktade läskmodellen. Poäng, helhetsbetyg, nästa gräns och
+			antal uppdateras direkt i tabellen. Ändringarna gäller bara här och sparas inte. Äldre
+			läskmodeller och platsmodeller behåller sina beräkningar.
+		</p>
+		<p class="mt-3 text-sm text-secondary">
+			Summa: {number(weightTotal)} %. Vikterna normaliseras till 100 % i beräkningen.
+			{#if weightTotal === 0}När alla vikter är 0 används standardvikterna.{/if}
+		</p>
+		<div class="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+			{#each CALIBRATION_METRICS as metric (metric.key)}
+				<label class="block min-w-0 text-sm text-ink">
+					<span class="flex items-center justify-between gap-3">
+						<span>{metric.key === 'sweetness' ? 'Sötmabalans' : metric.label}</span>
+						<span class="tabular-nums">{weights[metric.key]} %</span>
+					</span>
+					<input
+						type="range"
+						min="0"
+						max="100"
+						step="1"
+						bind:value={weights[metric.key]}
+						aria-describedby="calibration-help"
+						aria-valuetext={`${weights[metric.key]} procent`}
+						class="min-h-11 w-full cursor-pointer accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+					/>
+				</label>
+			{/each}
+		</div>
+		<button
+			type="button"
+			onclick={() => (weights = defaultCalibrationWeights())}
+			class="mt-4 min-h-11 rounded-full border border-line px-4 text-sm font-semibold text-ink hover:text-accent"
+			>Återställ standardvikter</button
+		>
+	</details>
 
 	<label class="block max-w-xl space-y-2"
 		><span class="field-label">Sök recension eller recensent</span><input
