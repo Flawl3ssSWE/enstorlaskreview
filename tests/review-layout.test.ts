@@ -29,8 +29,12 @@ test('refreshed soda pages keep their details in both themes and responsive layo
 		await expect(page.getByText(/Återköpspotential:/)).toContainText('5/5');
 		const facts = page.getByRole('region', { name: 'Drycksfakta', exact: true });
 		await expect(facts).toContainText('Förpackning: Burk');
+		await expect(facts.locator('svg[data-symbol="can"]')).toBeVisible();
+		await expect(facts.locator('svg[data-symbol="no-ice"]')).toBeVisible();
 		await expect(facts).toContainText('Koffein: 32 mg/100 ml');
-		await expect(facts).toContainText('Serveringsmetod: Glas · Sugrör');
+		await expect(facts.getByRole('list').getByRole('button')).toHaveCount(2);
+		await expect(facts.getByRole('button', { name: 'Om glas', exact: true })).toBeVisible();
+		await expect(facts.getByRole('button', { name: 'Om sugrör', exact: true })).toBeVisible();
 		await expect(page.getByRole('region', { name: 'Recension', exact: true })).toContainText(
 			'Frisk och balanserad enligt Alex.'
 		);

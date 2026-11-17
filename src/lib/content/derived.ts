@@ -8,8 +8,13 @@ import type {
 } from '../types/review-statistics';
 import { isValidBeerPriceKr } from '../utils/price';
 import { drinkVolumeMl, laskPerKrona, nutrientAmounts } from '../utils/drink-facts';
-import { SODA_RATING_METRICS } from '../review-metadata';
-import { sodaScore, reviewerKey } from './soda';
+import {
+	SODA_RATING_METRICS,
+	TASTING_EXTRA_METRICS,
+	TASTING_PROFILE_METRICS,
+	TASTING_RATING_METRICS
+} from '../review-metadata';
+import { isSodaReview, reviewScore, reviewerKey } from './soda';
 
 export function buildReviewMap(reviews: PublicReview[]): PublicReviewMapData {
 	return {
@@ -33,8 +38,15 @@ export function buildReviewMap(reviews: PublicReview[]): PublicReviewMapData {
 export function buildReviewStatistics(reviews: PublicReview[]): PublicReviewStatistics {
 	const average = (values: number[]): number | null =>
 		values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+	const ratingAverage = (read: (review: PublicReview) => number | undefined) => {
+		const values = reviews.flatMap((review) => {
+			const value = read(review);
+			return value === undefined ? [] : [value];
+		});
+		return { average: average(values), count: values.length };
+	};
 	const priced = reviews.filter((review) => isValidBeerPriceKr(review.beerPriceKr));
-	const sodaReviews = reviews.filter((review) => review.sodaRatings !== undefined);
+	const sodaReviews = reviews.filter(isSodaReview);
 	const repurchases = reviews.flatMap((review) =>
 		review.repurchasePotential === undefined ? [] : [review.repurchasePotential]
 	);
@@ -43,7 +55,7 @@ export function buildReviewStatistics(reviews: PublicReview[]): PublicReviewStat
 	const scored = sodaReviews.map((review) => ({
 		title: review.title,
 		slug: review.slug,
-		value: sodaScore(review.sodaRatings!)
+		value: reviewScore(review)
 	}));
 	const unitPrices = priced.flatMap((review) => {
 		const volume = drinkVolumeMl(review);
@@ -173,13 +185,33 @@ export function buildReviewStatistics(reviews: PublicReview[]): PublicReviewStat
 		favoriteReviewCount: favorites.length,
 		favoriteCount,
 		favoritePercentage: favorites.length ? (favoriteCount / favorites.length) * 100 : null,
-		ratingAverages: SODA_RATING_METRICS.map(({ key }) => {
-			const values = sodaReviews.flatMap((review) => {
-				const value = review.sodaRatings![key];
-				return value === undefined ? [] : [value];
-			});
-			return { key, average: average(values), count: values.length };
-		}),
+		ratingAverages: SODA_RATING_METRICS.map(({ key }) => ({
+			key,
+			...ratingAverage((review) => review.sodaRatings?.[key])
+		})),
+		tastingAverages: [
+			{
+				label: 'Smakprofil',
+				metrics: TASTING_PROFILE_METRICS.map((metric) => ({
+					...metric,
+					...ratingAverage((review) => review.sodaTasting?.profile[metric.key])
+				}))
+			},
+			{
+				label: 'Delbetyg',
+				metrics: TASTING_RATING_METRICS.map((metric) => ({
+					...metric,
+					...ratingAverage((review) => review.sodaTasting?.ratings[metric.key])
+				}))
+			},
+			{
+				label: 'Övriga betyg',
+				metrics: TASTING_EXTRA_METRICS.map((metric) => ({
+					...metric,
+					...ratingAverage((review) => review.sodaTasting?.extras[metric.key])
+				}))
+			}
+		],
 		topRatedProducts: extremes(scored, 'max'),
 		bestValueProducts: extremes(unitPrices, 'min'),
 		mostExpensiveProducts: extremes(unitPrices, 'max'),

@@ -1,4 +1,4 @@
-import { openEditorTools } from './review-editor-helpers';
+import { fillRating, fillTasting, openEditorTools } from './review-editor-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { validateReview } from '../src/lib/content/validation';
@@ -82,8 +82,31 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		await expect(page.getByRole('heading', { name: 'Smak', exact: true })).toBeFocused();
 		await page.getByLabel('Fri text').fill('Frisk och god.');
 		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+		await expect(page.locator('#profile-sweetness-1')).toBeFocused();
+		await expect(page.getByRole('radiogroup', { name: 'Sötma' }).getByRole('radio')).toHaveCount(5);
+		await expect(page.locator('#profile-sweetness-0')).toHaveCount(0);
+		await expect(page.getByRole('radiogroup', { name: 'Sötma' })).toContainText(
+			'Välj ett värde från 1 till 5.'
+		);
+		await fillTasting(page, true);
+		await fillRating(page, 'extra-name', 1, true);
+		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+		await expect(page.locator('#extra-packaging-1')).toBeFocused();
+		await fillRating(page, 'extra-packaging', 4, true);
+		await expect(page.locator('#extra-packaging-4')).toBeChecked();
+		await page.locator('#extra-packaging-4').press('ArrowRight');
+		await expect(page.locator('#extra-packaging-5')).toBeChecked();
+		await page.setViewportSize({ width: 320, height: 812 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+			true
+		);
+		await page.setViewportSize({ width: 850, height: 812 });
+		await expect(page.locator('#extra-packaging')).toHaveValue('5');
+		await page.setViewportSize({ width: 375, height: 812 });
+		await expect(page.locator('#extra-packaging-5')).toBeChecked();
+		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 		await expect(page.getByLabel('Återköpspotential')).toBeFocused();
-		await page.getByLabel('Återköpspotential').selectOption('0');
+		await page.getByLabel('Återköpspotential').selectOption('1');
 		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 		await expect(page.getByLabel('Författare', { exact: true })).toHaveValue('Anton');
 		await expect(page.locator('#sugar-type')).toHaveValue('sugar-free');
@@ -134,6 +157,9 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 		await expect(page.locator('#review-1-price')).toBeFocused();
 		await page.locator('#review-1-price').fill('12,5');
+		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+		await expect(page.locator('#extra-value-1')).toBeFocused();
+		await fillRating(page, 'extra-value', 2, true);
 		await expect(page.getByRole('slider', { name: 'Prislinjal' })).toHaveCount(0);
 		await openEditorTools(page);
 		await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
@@ -150,10 +176,11 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		validateReview(json, file.suggestedFilename());
 		expect(json).toMatchObject({
 			author: 'Anton',
-			repurchasePotential: 0,
+			repurchasePotential: 1,
 			volumeMl: 500,
 			container: 'Glasflaska',
-			beerPriceKr: 12.5
+			beerPriceKr: 12.5,
+			sodaTasting: { extras: { name: 1, packaging: 5, value: 2 } }
 		});
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
 			true
@@ -205,10 +232,14 @@ test('required data and automatic reset work in the full form', async ({ page })
 	await openEditorTools(page);
 	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
 	await image(page);
-	await page.locator('#repurchase-potential').selectOption('0');
+	await page.locator('#repurchase-potential').selectOption('1');
 	await page.getByLabel('Fri text').fill('Frisk.');
+	await fillTasting(page);
+	await fillRating(page, 'extra-name', 3);
+	await fillRating(page, 'extra-packaging', 3);
 	await page.getByLabel('Läskens namn / rubrik').fill('Testläsk Zero');
 	await page.locator('#review-1-price').fill('20');
+	await fillRating(page, 'extra-value', 3);
 	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
 	await expect(page.locator('#review-1-volume')).toBeFocused();
 	await page.locator('#review-1-volume').selectOption('330');

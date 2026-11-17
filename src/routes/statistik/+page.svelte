@@ -5,6 +5,7 @@
 	import { formatDrinkNumber, formatDrinkVolume } from '$lib/utils/drink-facts';
 	import { capitalizeAuthorName } from '$lib/utils/authors';
 	import { SODA_RATING_METRICS } from '$lib/review-metadata';
+	import type { RatingAverage } from '$lib/types/review-statistics';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -81,7 +82,7 @@
 				data.statistics.averageSodaScore === null
 					? '–'
 					: `${formatDecimal(data.statistics.averageSodaScore)} / 5`,
-			note: `Viktat läskbetyg från ${data.statistics.sodaReviewCount} recensioner. Platsbetyg ingår inte.`
+			note: `Baserat på ${data.statistics.sodaReviewCount} recensioner med respektive betygsmodell.`
 		},
 		{
 			label: 'Snittpris per förpackning',
@@ -134,6 +135,27 @@
 		}
 	]);
 </script>
+
+{#snippet averages(metrics: (RatingAverage & { label: string; description: string })[])}
+	<dl class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+		{#each metrics as metric (metric.key)}
+			<div>
+				<div class="flex items-baseline justify-between gap-3">
+					<dt class="flex items-center gap-1 text-sm font-semibold text-secondary">
+						{metric.label}<HelpTip
+							label={metric.label}
+							text={`${metric.description} Baserat på ${metric.count} delbetyg.`}
+						/>
+					</dt>
+					<dd class="text-sm text-ink">
+						{formatDecimal(metric.average)}{metric.average === null ? '' : ' / 5'}
+					</dd>
+				</div>
+				<div class="mt-2"><RatingCells value={metric.average ?? 0} /></div>
+			</div>
+		{/each}
+	</dl>
+{/snippet}
 
 <section class="page-shell">
 	<div class="mx-auto w-full max-w-6xl">
@@ -282,32 +304,32 @@
 			</div>
 		</section>
 
-		{#if data.statistics.sodaReviewCount > 0}
-			<section class="glass-panel mt-6 p-6 sm:p-8">
-				<h2 class="text-2xl font-semibold text-ink">Läskens snittbetyg</h2>
-				<p class="mt-2 text-sm leading-relaxed text-secondary">
-					Snitt på skalan 0–5. Sötma, kolsyra och konsistens beskriver intensitet. Kolsyra går från
-					0 = avslagen till 5 = väldigt kolsyrad. I totalbetyget premieras mer kolsyra.
-				</p>
-				<dl class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-					{#each data.statistics.ratingAverages as metric}
-						{@const metadata = SODA_RATING_METRICS.find(({ key }) => key === metric.key)!}
+		{#if data.statistics.tastingAverages.some( (group) => group.metrics.some(({ count }) => count > 0) )}
+			<section class="glass-panel mt-6 space-y-6 p-6 sm:p-8">
+				<h2 class="text-2xl font-semibold text-ink">Snitt för smakprofil och delbetyg</h2>
+				{#each data.statistics.tastingAverages as group (group.label)}
+					{@const assessed = group.metrics.filter(({ count }) => count > 0)}
+					{#if assessed.length}
 						<div>
-							<div class="flex items-baseline justify-between gap-3">
-								<dt class="flex items-center gap-1 text-sm font-semibold text-secondary">
-									{metadata.label}<HelpTip
-										label={metadata.label}
-										text={`${metadata.description} Baserat på ${metric.count} delbetyg.`}
-									/>
-								</dt>
-								<dd class="text-sm text-ink">
-									{formatDecimal(metric.average)}{metric.average === null ? '' : ' / 5'}
-								</dd>
-							</div>
-							<div class="mt-2"><RatingCells value={metric.average ?? 0} /></div>
+							<h3 class="text-lg font-semibold text-ink">{group.label}</h3>
+							{@render averages(assessed)}
 						</div>
-					{/each}
-				</dl>
+					{/if}
+				{/each}
+			</section>
+		{/if}
+		{#if data.statistics.ratingAverages.some(({ count }) => count > 0)}
+			<section class="glass-panel mt-6 p-6 sm:p-8">
+				<h2 class="text-2xl font-semibold text-ink">Läskens snittbetyg · Äldre modeller</h2>
+				<p class="mt-2 text-sm leading-relaxed text-secondary">
+					Snitt på skalan 0–5 från recensioner som använder en tidigare modell.
+				</p>
+				{@render averages(
+					data.statistics.ratingAverages.map((metric) => ({
+						...SODA_RATING_METRICS.find(({ key }) => key === metric.key)!,
+						...metric
+					}))
+				)}
 			</section>
 		{/if}
 		<section class="glass-panel mt-6 p-6 sm:p-8" aria-labelledby="brands-heading">

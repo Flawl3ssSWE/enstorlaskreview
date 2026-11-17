@@ -1,4 +1,4 @@
-import { openEditorTools } from './review-editor-helpers';
+import { fillRating, fillTasting, openEditorTools } from './review-editor-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import fixture from './fixtures/content/testsoda.json' with { type: 'json' };
@@ -172,12 +172,16 @@ async function fillReview(page: Page, wizard: boolean) {
 	await expect(page.getByText('Komprimerad bild:')).toBeVisible();
 	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 	await page.getByLabel('Fri text').fill('Frisk läsk med **tydlig smak**.');
+	await fillTasting(page);
+	await fillRating(page, 'extra-name', 3);
+	await fillRating(page, 'extra-packaging', 3);
 	await page.locator('#repurchase-potential').selectOption('3');
 	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 	await page.getByLabel('Läskens namn / rubrik').fill('Publicerad testläsk');
 	await page.getByLabel('Författare', { exact: true }).fill('Test');
 	await page.locator('#review-1-volume').selectOption('330');
 	await page.locator('#review-1-price').fill('20');
+	await fillRating(page, 'extra-value', 3);
 	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 }
 

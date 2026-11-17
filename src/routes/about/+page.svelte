@@ -1,7 +1,11 @@
 <script lang="ts">
 	import RatingMug from '$lib/components/RatingMug.svelte';
 	import { base } from '$app/paths';
-	import { REPURCHASE_POTENTIAL_LABELS } from '$lib/review-metadata';
+	import {
+		TASTING_REPURCHASE_POTENTIAL_LABELS,
+		TASTING_MIN_RATING,
+		TASTING_RATING_METRICS
+	} from '$lib/review-metadata';
 </script>
 
 <div class="page-shell">
@@ -19,14 +23,18 @@
 			<section>
 				<h2 class="text-2xl font-semibold text-ink">Hur fungerar betygen?</h2>
 				<p class="mt-2 text-secondary">
-					Läsken får ett helhetsbetyg mellan 0 och 3. Muggen fylls i tre steg och siffran visas
-					alltid bredvid. En tom mugg betyder 0/3. I nya recensioner väger smak 30 %; sötmabalans,
-					kolsyra och drickbarhet 15 % vardera; passande konsistens och hur väl smaken matchar
-					namnet 10 % vardera; prisvärdhet 5 %. Sötma 3 är perfekt och ger högst balansbetyg, medan
-					både för lite och för mycket sötma drar ned. Kolsyra beskriver hur kolsyrad drycken är: 0
-					= avslagen, 5 = väldigt kolsyrad. I totalbetyget premieras mer kolsyra. Konsistens
-					beskriver hur rinnig läsken är; ett separat betyg bedömer hur väl konsistensen passar
-					läsken. Äldre recensioner behåller sin tidigare beräkning.
+					Läsken får ett helhetsbetyg mellan 0 och 3 muggar. För nya recensioner väger vi ihop fyra
+					delbetyg på skalan 1–5. Äldre recensioner behåller sin tidigare beräkning.
+				</p>
+				<ul class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-secondary">
+					{#each TASTING_RATING_METRICS as metric (metric.key)}
+						<li>{metric.label} <strong>{metric.weight} %</strong></li>
+					{/each}
+				</ul>
+				<p class="mt-3 text-secondary">
+					Smakprofilen beskriver hur tydligt sötma, surhet, kolsyra, fyllighet och beska märks. En
+					riktigt sur läsk kan få full poäng i balans om syran fungerar ihop med resten av smaken.
+					Namn, förpackning, prisvärdhet och återköpspotential visas separat i den nya modellen.
 				</p>
 				<ul class="mt-3 space-y-2 text-secondary">
 					<li class="flex items-center gap-3"><RatingMug rating={0} /> Inget extra.</li>
@@ -52,13 +60,12 @@
 			<section>
 				<h2 class="text-2xl font-semibold text-ink">Vad är återköpspotential?</h2>
 				<p class="mt-2 text-secondary">
-					Återköpspotential visar hur gärna recensenten köper läsken igen. Den bedöms separat på en
-					skala från 0 till 5 och påverkar inte helhetsbetyget. Saknat betyg betyder att
-					återköpspotentialen ännu inte har bedömts.
+					Återköpspotential visar hur gärna recensenten köper läsken igen. Den bedöms på en skala
+					från 1 till 5 i den nya modellen och visas separat från helhetsbetyget.
 				</p>
 				<ul class="mt-3 space-y-1 text-secondary">
-					{#each REPURCHASE_POTENTIAL_LABELS as label, score}
-						<li><strong>{score}/5</strong>: {label}.</li>
+					{#each TASTING_REPURCHASE_POTENTIAL_LABELS as label, index}
+						<li><strong>{index + TASTING_MIN_RATING}/5</strong> – {label}.</li>
 					{/each}
 				</ul>
 			</section>

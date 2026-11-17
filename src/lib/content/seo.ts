@@ -1,3 +1,4 @@
+import { isSodaReview } from './soda';
 import type { PublicReview } from '../types/bar-review';
 import { capitalizeAuthorName } from '../utils/authors';
 
@@ -152,10 +153,10 @@ export function reviewStructuredData(review: PublicReview, base: string) {
 		})),
 		publisher: { '@type': 'Organization', name: SITE_NAME },
 		itemReviewed: {
-			'@type': review.sodaRatings ? 'Product' : 'LocalBusiness',
+			'@type': isSodaReview(review) ? 'Product' : 'LocalBusiness',
 			name: review.title,
 			image: publicUrl(`images/${encodeURIComponent(review.image)}`, base),
-			...(review.sodaRatings && review.beerBrand
+			...(isSodaReview(review) && review.beerBrand
 				? { brand: { '@type': 'Brand', name: review.beerBrand } }
 				: {})
 		},

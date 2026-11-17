@@ -58,7 +58,7 @@ export const REVIEW_RATING_METRICS = [
 	}
 ] as const satisfies readonly ReviewRatingMetric[];
 
-/** New soda scores use sweetness balance and consistency suitability. */
+/** Published legacy scores use these exact weights. */
 export const SODA_RATING_METRICS = [
 	{ key: 'taste', label: 'Smak', description: 'Hur god och tydlig är smaken?', weight: 0.3 },
 	{
@@ -100,12 +100,89 @@ export const SODA_RATING_METRICS = [
 	{ key: 'value', label: 'Pris', description: 'Hur prisvärd är läsken?', weight: 0.05 }
 ] as const;
 
+export const TASTING_MIN_RATING = 1;
+
+export const TASTING_PROFILE_METRICS = [
+	{
+		key: 'sweetness',
+		label: 'Sötma',
+		description: '1 = ingen märkbar sötma, 3 = tydligt söt, 5 = mycket söt.'
+	},
+	{
+		key: 'acidity',
+		label: 'Surhet',
+		description: '1 = ingen märkbar surhet, 3 = tydligt syrlig, 5 = ordentligt sur.'
+	},
+	{
+		key: 'carbonation',
+		label: 'Kolsyra',
+		description: '1 = stilla eller avslagen, 3 = tydligt bubblig, 5 = väldigt kraftigt bubblig.'
+	},
+	{
+		key: 'body',
+		label: 'Fyllighet',
+		description: '1 = vattnig, 3 = medelfyllig, 5 = tjock eller sirapslik.'
+	},
+	{
+		key: 'bitterness',
+		label: 'Beska',
+		description: '1 = ingen märkbar beska, 3 = tydligt besk, 5 = dominerande beska.'
+	}
+] as const;
+
+export const TASTING_RATING_METRICS = [
+	{ key: 'taste', label: 'Smak', description: 'Hur god är smaken i själva klunken?', weight: 40 },
+	{
+		key: 'balance',
+		label: 'Balans',
+		description: 'Hur väl fungerar sötma, surhet och beska ihop för den här typen av läsk?',
+		weight: 25
+	},
+	{
+		key: 'aftertaste',
+		label: 'Eftersmak',
+		description: 'Hur behagligt smakar det efter klunken? Även en kort, ren avslutning kan få 5.',
+		weight: 20
+	},
+	{
+		key: 'mouthfeel',
+		label: 'Munkänsla',
+		description: 'Hur väl passar bubblorna och fylligheten till drycken?',
+		weight: 15
+	}
+] as const;
+
+export const TASTING_EXTRA_METRICS = [
+	{
+		key: 'name',
+		label: 'Namnet',
+		description: 'Passar namnet läsken, väcker det nyfikenhet och är det lätt att komma ihåg?'
+	},
+	{
+		key: 'packaging',
+		label: 'Förpackningen',
+		description:
+			'Bedöm utseende och känsla. För läsk från tapp kan du bedöma glaset eller muggen den serverades i.'
+	},
+	{
+		key: 'value',
+		label: 'Prisvärdhet',
+		description: 'Hur prisvärd är läsken till det pris du betalade?'
+	}
+] as const;
+
 export const VENUE_RATING_METRICS = REVIEW_RATING_METRICS.filter(
 	(
 		metric
 	): metric is (typeof REVIEW_RATING_METRICS)[number] & {
 		key: import('./types/bar-review').VenueRatingKey;
 	} => ['atmosphere', 'service', 'selection', 'cleanliness', 'soundLevel'].includes(metric.key)
+);
+
+export const TASTING_VENUE_RATING_METRICS = VENUE_RATING_METRICS.map((metric) =>
+	metric.key === 'soundLevel'
+		? { ...metric, description: 'Ljudnivå (1 = högljutt, 5 = tyst)' }
+		: metric
 );
 
 export const DRINK_CONTAINERS = [
@@ -130,6 +207,11 @@ export const REPURCHASE_POTENTIAL_LABELS = [
 	'Köper gärna igen',
 	'Given i kylen'
 ] as const;
+
+export const TASTING_REPURCHASE_POTENTIAL_LABELS = [
+	REPURCHASE_POTENTIAL_LABELS[0],
+	...REPURCHASE_POTENTIAL_LABELS.slice(2)
+];
 
 export const DRINK_TYPE_FILTERS = [
 	{ value: 'energy', label: 'Energidryck' },

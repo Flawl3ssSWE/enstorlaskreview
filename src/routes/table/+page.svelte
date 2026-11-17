@@ -1,26 +1,57 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import {
 		OVERALL_RATING_LEVELS,
 		SODA_RATING_METRICS,
+		TASTING_EXTRA_METRICS,
+		TASTING_PROFILE_METRICS,
+		TASTING_RATING_METRICS,
 		REVIEW_RATING_METRICS
 	} from '$lib/review-metadata';
 	import RatingMug from '$lib/components/RatingMug.svelte';
 	import {
 		CALIBRATION_METRICS,
 		calibrateOverview,
-		defaultCalibrationWeights
+		defaultCalibrationWeights,
+		type CalibrationModel
 	} from '$lib/content/score-calibration';
 	import { formatAuthors } from '$lib/utils/authors';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 	let search = $state('');
-	let weights = $state(defaultCalibrationWeights());
-	const weightTotal = $derived(CALIBRATION_METRICS.reduce((sum, { key }) => sum + weights[key], 0));
-	const calibrated = $derived(data.reviews.map((review) => calibrateOverview(review, weights)));
-	let selectedMetric = $state('taste');
+	let calibrationModel = $state<CalibrationModel>('v2');
+	let modelWeights = $state({
+		v2: defaultCalibrationWeights('v2'),
+		weighted: defaultCalibrationWeights('weighted')
+	});
+	const calibrationMetrics = $derived(CALIBRATION_METRICS[calibrationModel]);
+	const weights = $derived(modelWeights[calibrationModel]);
+	const weightTotal = $derived(calibrationMetrics.reduce((sum, { key }) => sum + weights[key], 0));
+	const calibrated = $derived(
+		data.reviews.map((review) => calibrateOverview(review, calibrationModel, weights))
+	);
+	const example = $derived(
+		calibrationModel === 'v2' && data.calibrationExample
+			? calibrateOverview(data.calibrationExample, calibrationModel, weights)
+			: null
+	);
+	let selectedMetric = $state(
+		untrack(() =>
+			data.reviews.some(({ scoreModel }) => scoreModel === 'v2') ? 'v2-rating-taste' : 'taste'
+		)
+	);
+	const tastingMetricGroups = [
+		{ label: 'Delbetyg · V2', prefix: 'rating', metrics: TASTING_RATING_METRICS },
+		{ label: 'Smakprofil · V2', prefix: 'profile', metrics: TASTING_PROFILE_METRICS },
+		{ label: 'Övriga betyg · V2', prefix: 'extra', metrics: TASTING_EXTRA_METRICS }
+	].map(({ label, prefix, metrics }) => ({
+		label,
+		options: metrics.map(({ key, label }) => ({ key: `v2-${prefix}-${key}`, label }))
+	}));
 	const metricOptions = [
+		...tastingMetricGroups.flatMap(({ options }) => options),
 		...SODA_RATING_METRICS.map(({ key, label }) => ({ key, label })),
 		{ key: 'sweetnessBalance', label: 'Sötmabalans i formeln' },
 		...REVIEW_RATING_METRICS.map(({ key, label }) => ({ key, label }))
@@ -126,33 +157,52 @@
 			{/each}
 		</div>
 		<p class="mt-4 text-sm text-muted">
-			Antalen gäller läskrecensioner som matchar sökningen. Varje recension räknas separat;
-			platsrecensioner ingår inte. Poängen visas med upp till tre decimaler. Betyg och avstånd till
-			nästa gräns beräknas före avrundning.
+			Antalen gäller läskrecensioner som matchar sökningen. Varje läskrecension räknas separat.
+			Poängen visas med upp till tre decimaler. Betyg och avstånd till nästa gräns beräknas före
+			avrundning.
 		</p>
-		<details class="mt-4 text-sm text-secondary">
-			<summary class="min-h-11 cursor-pointer py-3 font-semibold text-ink"
-				>Så räknas poängen</summary
-			>
-			<ul class="mt-2 grid gap-2 sm:grid-cols-2">
-				{#each SODA_RATING_METRICS.filter(({ weight }) => weight > 0) as metric (metric.key)}
-					<li>
-						{metric.key === 'sweetness' ? 'Sötmabalans' : metric.label}: {number(
-							metric.weight * 100
-						)} %
-					</li>
-				{/each}
-			</ul>
-			<p class="mt-4">
-				Sötmabalans = sötma ÷ 3 × 5 när sötman är 0–3, annars (5 − sötma) ÷ 2 × 5. Sötma 3 ger
-				alltså högsta balanspoängen. Kolsyra går från 0 = avslagen till 5 = väldigt kolsyrad och
-				räknas direkt. Konsistensens rinnighet påverkar inte totalen.
+		<details class="mt-5 border-t border-line pt-2 text-sm text-secondary">
+			<summary class="min-h-11 cursor-pointer py-3 font-semibold text-ink">
+				Så räknas poängen
+			</summary>
+			<h3 class="font-semibold text-ink">Så räknas läskmodell V2</h3>
+			<p class="mt-2">
+				Varje delbetyg sätts på skalan 1–5. Multiplicera varje delbetyg med dess vikt och lägg ihop
+				resultaten för att få poängen.
 			</p>
-			<p class="mt-3">
-				Äldre läskrecensioner utan passande konsistens använder snittet av smak, kolsyra,
-				drickbarhet, matchar namnet och prisvärdhet. Platsrecensioner använder sina egna vikter.
-				Läskfavorit, återköpspotential och separata platsbetyg påverkar inte läskbetyget.
+			<p class="mt-2 font-semibold tabular-nums text-ink">
+				{TASTING_RATING_METRICS.map(({ label, weight }) => `${label} × ${weight} %`).join(' + ')}
 			</p>
+			<p class="mt-2">
+				Smakprofil, namn, förpackning, prisvärdhet, återköpspotential, läskfavorit och platsbetyg
+				visas som separata uppgifter.
+			</p>
+			<details class="mt-4 text-sm text-secondary">
+				<summary class="min-h-11 cursor-pointer py-3 font-semibold text-ink">
+					Så räknas äldre betyg
+				</summary>
+				<h3 class="mt-3 font-semibold text-ink">Tidigare viktad läskmodell</h3>
+				<p class="mt-2">
+					{CALIBRATION_METRICS.weighted
+						.map(({ label, weight }) => `${label} × ${number(weight)} %`)
+						.join(' + ')}
+				</p>
+				<p class="mt-3">
+					Sötmabalans = sötma ÷ 3 × 5 när sötman är 0–3, annars (5 − sötma) ÷ 2 × 5. Kolsyra räknas
+					direkt på skalan 0–5.
+				</p>
+				<h3 class="mt-4 font-semibold text-ink">Äldre läskmodell</h3>
+				<p class="mt-2">
+					Recensioner som saknar betyg för passande konsistens använder snittet av smak, kolsyra,
+					drickbarhet, hur väl smaken matchar namnet och prisvärdhet.
+				</p>
+				<h3 class="mt-4 font-semibold text-ink">Platsmodell</h3>
+				<p class="mt-2">
+					{REVIEW_RATING_METRICS.map(
+						({ label, weight }) => `${label} × ${number(weight * 100)} %`
+					).join(' + ')}
+				</p>
+			</details>
 		</details>
 	</section>
 
@@ -160,20 +210,26 @@
 		<summary class="min-h-11 cursor-pointer py-2 text-xl font-semibold text-ink">
 			Kalibrera poängen
 		</summary>
+		<label class="mt-3 block max-w-sm space-y-2">
+			<span class="field-label">Betygsmodell att kalibrera</span>
+			<select class="field" bind:value={calibrationModel}>
+				<option value="v2">Läskmodell V2</option>
+				<option value="weighted">Tidigare viktad läskmodell</option>
+			</select>
+		</label>
 		<p id="calibration-help" class="mt-3 max-w-3xl text-sm text-secondary">
-			Prova olika procentvikter för den viktade läskmodellen. Poäng, helhetsbetyg, nästa gräns och
-			antal uppdateras direkt i tabellen. Ändringarna gäller bara här och sparas inte. Äldre
-			läskmodeller och platsmodeller behåller sina beräkningar.
+			Prova olika vikter för den valda modellen. Poäng, helhetsbetyg, nästa gräns och antal
+			uppdateras i tabellen. Ändringarna gäller under det här besöket.
 		</p>
 		<p class="mt-3 text-sm text-secondary">
-			Summa: {number(weightTotal)} %. Vikterna normaliseras till 100 % i beräkningen.
+			Summa {number(weightTotal)} %. Vikterna normaliseras till 100 % i beräkningen.
 			{#if weightTotal === 0}När alla vikter är 0 används standardvikterna.{/if}
 		</p>
 		<div class="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-			{#each CALIBRATION_METRICS as metric (metric.key)}
+			{#each calibrationMetrics as metric (metric.key)}
 				<label class="block min-w-0 text-sm text-ink">
 					<span class="flex items-center justify-between gap-3">
-						<span>{metric.key === 'sweetness' ? 'Sötmabalans' : metric.label}</span>
+						<span>{metric.label}</span>
 						<span class="tabular-nums">{weights[metric.key]} %</span>
 					</span>
 					<input
@@ -181,7 +237,7 @@
 						min="0"
 						max="100"
 						step="1"
-						bind:value={weights[metric.key]}
+						bind:value={modelWeights[calibrationModel][metric.key]}
 						aria-describedby="calibration-help"
 						aria-valuetext={`${weights[metric.key]} procent`}
 						class="min-h-11 w-full cursor-pointer accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -191,10 +247,35 @@
 		</div>
 		<button
 			type="button"
-			onclick={() => (weights = defaultCalibrationWeights())}
+			onclick={() => (modelWeights[calibrationModel] = defaultCalibrationWeights(calibrationModel))}
 			class="mt-4 min-h-11 rounded-full border border-line px-4 text-sm font-semibold text-ink hover:text-accent"
 			>Återställ standardvikter</button
 		>
+		{#if example && data.calibrationExample}
+			<section
+				aria-labelledby="calibration-example-heading"
+				class="mt-5 rounded-xl border border-line p-4"
+			>
+				<h3 id="calibration-example-heading" class="font-semibold text-ink">Räkneexempel</h3>
+				<p class="mt-2 text-sm text-secondary">
+					Exemplet visas tills det finns publicerade recensioner med den valda modellen.
+				</p>
+				<dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+					<div>
+						<dt class="text-secondary">Med standardvikterna</dt>
+						<dd class="mt-1 font-semibold tabular-nums text-ink">
+							{number(data.calibrationExample.score)}/5 · {data.calibrationExample.rating}/3 muggar
+						</dd>
+					</div>
+					<div>
+						<dt class="text-secondary">Med dina vikter</dt>
+						<dd class="mt-1 font-semibold tabular-nums text-ink">
+							{number(example.score)}/5 · {example.rating}/3 muggar
+						</dd>
+					</div>
+				</dl>
+			</section>
+		{/if}
 	</details>
 
 	<label class="block max-w-xl space-y-2"
@@ -240,7 +321,14 @@
 										aria-label="Välj delbetyg"
 										bind:value={selectedMetric}
 									>
-										<optgroup label="Läskbetyg"
+										{#each tastingMetricGroups as group (group.label)}
+											<optgroup label={group.label}>
+												{#each group.options as option (option.key)}
+													<option value={option.key}>{option.label}</option>
+												{/each}
+											</optgroup>
+										{/each}
+										<optgroup label="Äldre läskbetyg"
 											>{#each SODA_RATING_METRICS as metric (metric.key)}<option value={metric.key}
 													>{metric.label}</option
 												>{/each}<option value="sweetnessBalance">Sötmabalans i formeln</option

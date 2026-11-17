@@ -1,4 +1,5 @@
 import type { DrinkContainer, ReviewContent } from '$lib/types/bar-review';
+import { generateSodaId } from './slug';
 
 const normalize = (value: string) =>
 	value
@@ -11,17 +12,59 @@ const normalize = (value: string) =>
 export function suggestBrand(
 	title: string,
 	brands: string[],
-	sodas: { title: string; brand: string }[] = []
+	reviews: Pick<ReviewContent, 'title' | 'beerBrand'>[] = []
 ): string {
 	const name = normalize(title);
-	const exact = sodas.filter((soda) => normalize(soda.title) === name && soda.brand);
-	const exactBrands = [...new Set(exact.map((soda) => soda.brand))];
-	if (exactBrands.length === 1) return exactBrands[0];
+	const exactBrands = new Set(
+		reviews.flatMap(({ title, beerBrand }) =>
+			beerBrand && normalize(title) === name ? [beerBrand] : []
+		)
+	);
+	if (exactBrands.size === 1) return [...exactBrands][0];
 	return (
 		brands
 			.filter((brand) => name === normalize(brand) || name.startsWith(`${normalize(brand)} `))
 			.sort((a, b) => normalize(b).length - normalize(a).length)[0] ?? ''
 	);
+}
+
+function fullSodaName(title: string, brand: string): string {
+	const name = normalize(title);
+	const prefix = normalize(brand);
+	return !prefix || name === prefix || name.startsWith(`${prefix} `) ? title : `${brand} ${title}`;
+}
+
+export function suggestSodaId(
+	title: string,
+	brand: string,
+	reviews: Pick<ReviewContent, 'title' | 'beerBrand' | 'sodaId'>[]
+): string | undefined {
+	if (!normalize(title)) return;
+	const fullName = fullSodaName(title, brand);
+	const name = normalize(fullName);
+	const brandKey = normalize(brand);
+	const matches = new Set<string>();
+	const occupied = new Set<string>();
+	for (const review of reviews) {
+		if (!review.sodaId) continue;
+		occupied.add(review.sodaId);
+		const reviewedBrand = review.beerBrand ?? '';
+		const reviewedBrandKey = normalize(reviewedBrand);
+		if (
+			(!brandKey || !reviewedBrandKey || reviewedBrandKey === brandKey) &&
+			normalize(fullSodaName(review.title, reviewedBrand)) === name
+		)
+			matches.add(review.sodaId);
+	}
+	if (matches.size === 1) return [...matches][0];
+	if (matches.size > 1) return;
+
+	const baseId = generateSodaId(fullName);
+	if (!baseId) return;
+	const fit = (suffix = '') => baseId.slice(0, 100 - suffix.length).replace(/-$/, '') + suffix;
+	let id = fit();
+	for (let index = 2; occupied.has(id); index++) id = fit(`-${index}`);
+	return id;
 }
 
 export function suggestContainer(volume?: number): DrinkContainer | undefined {

@@ -4,6 +4,7 @@ import {
 	REVIEW_BASE_BRANCH,
 	REVIEW_REPOSITORY
 } from '../site';
+import { isSodaReview } from '../content/soda';
 import { validateReview } from '../content/validation';
 import { contentKey, type ReviewSubmission } from '../content/submission';
 import type { ReviewContent } from '../types/bar-review';
@@ -185,7 +186,7 @@ export async function loadCurrentGitHubReview(
 	const { reviews } = await readRepositoryReviews(client);
 	const review = reviews.find((item) => item.slug === slug);
 	if (!review) throw new Error('Recensionen saknas på GitHub. Ingen recension laddades in.');
-	if (!review.sodaRatings)
+	if (!isSodaReview(review))
 		throw new Error('Formuläret kan bara redigera läskrecensioner med läskbetyg.');
 	return review;
 }

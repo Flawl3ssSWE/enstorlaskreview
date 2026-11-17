@@ -31,6 +31,12 @@ export interface BrandStatistic {
 	averageClPerKrona: number | null;
 }
 
+export interface RatingAverage {
+	key: string;
+	average: number | null;
+	count: number;
+}
+
 export interface PublicReviewStatistics {
 	totalReviews: number;
 	productCount: number;
@@ -49,7 +55,11 @@ export interface PublicReviewStatistics {
 	favoriteReviewCount: number;
 	favoriteCount: number;
 	favoritePercentage: number | null;
-	ratingAverages: Array<{ key: keyof SodaRatingValues; average: number | null; count: number }>;
+	ratingAverages: Array<RatingAverage & { key: keyof SodaRatingValues }>;
+	tastingAverages: Array<{
+		label: string;
+		metrics: Array<RatingAverage & { label: string; description: string }>;
+	}>;
 	topRatedProducts: ReviewStatisticProduct[];
 	bestValueProducts: ReviewStatisticProduct[];
 	mostExpensiveProducts: ReviewStatisticProduct[];

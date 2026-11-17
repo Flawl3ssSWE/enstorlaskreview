@@ -3,21 +3,33 @@
 	import RatingCells from '$lib/components/RatingCells.svelte';
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
 	import RepurchasePotential from '$lib/components/RepurchasePotential.svelte';
-	import { favoriteLabel, sweetnessBalance } from '$lib/content/soda';
+	import { favoriteLabel, isSodaReview, sweetnessBalance } from '$lib/content/soda';
 	import { resolve, base } from '$app/paths';
 	import type { PublicReview } from '$lib/types/bar-review';
 	import { UNKNOWN_BRAND_LABEL } from '$lib/brand';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
+	import SugarCube from '$lib/components/svgs/SugarCube.svelte';
 	import { drinkVolumeMl, drinkTypeLabels, nutritionFacts } from '$lib/utils/drink-facts';
 	import DrinkFacts from '$lib/components/DrinkFacts.svelte';
 	import DrinkTypeIcons from '$lib/components/DrinkTypeIcons.svelte';
 	import HelpTip from '$lib/components/HelpTip.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
+	import Bubbles from '@lucide/svelte/icons/bubbles';
+	import Citrus from '@lucide/svelte/icons/citrus';
+	import Leaf from '@lucide/svelte/icons/leaf';
 	import MapPin from '@lucide/svelte/icons/map-pin';
+	import Package from '@lucide/svelte/icons/package';
+	import Tag from '@lucide/svelte/icons/tag';
+	import Type from '@lucide/svelte/icons/type';
+	import Waves from '@lucide/svelte/icons/waves';
 	import RatingMug from '$lib/components/RatingMug.svelte';
 	import {
 		REVIEW_RATING_METRICS,
 		SODA_RATING_METRICS,
+		TASTING_PROFILE_METRICS,
+		TASTING_RATING_METRICS,
+		TASTING_EXTRA_METRICS,
+		TASTING_VENUE_RATING_METRICS,
 		VENUE_RATING_METRICS
 	} from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
@@ -37,6 +49,7 @@
 		demo?: boolean;
 	} = $props();
 	const bar = $derived(data.bar);
+	const ratingFormat = new Intl.NumberFormat('sv-SE', { maximumFractionDigits: 1 });
 	const favorite = $derived(favoriteLabel(bar));
 	const types = $derived(drinkTypeLabels(bar));
 	const hasDrinkFacts = $derived(
@@ -62,7 +75,11 @@
 			? SODA_RATING_METRICS.filter((metric) => bar.sodaRatings![metric.key] !== undefined).map(
 					(metric) => ({
 						...metric,
-						value: bar.sodaRatings![metric.key]!
+						value: bar.sodaRatings![metric.key]!,
+						description:
+							metric.key === 'sweetness' && balance !== undefined
+								? `${metric.description} Sötmabalans: ${ratingFormat.format(balance)}/5. Perfekt sötma (3) ger högst poäng.`
+								: metric.description
 					})
 				)
 			: REVIEW_RATING_METRICS.map((metric) => ({ ...metric, value: bar[metric.key]! }))
@@ -82,10 +99,48 @@
 		});
 	}
 
-	function formatRating(rating: number): string {
-		return `${rating.toLocaleString('sv-SE', { maximumFractionDigits: 1 })}/5`;
-	}
+	type RatingField = { key: string; label: string; description: string; value: number };
+	const profileSteps = [1, 2, 3, 4, 5];
+	const profileStyles = {
+		sweetness: { icon: SugarCube, color: 'text-sugared' },
+		acidity: { icon: Citrus, color: 'text-energy' },
+		carbonation: { icon: Bubbles, color: 'text-protein' },
+		body: { icon: Waves, color: 'text-electrolyte' },
+		bitterness: { icon: Leaf, color: 'text-sugarfree' }
+	};
+	const extraIcons = { name: Type, packaging: Package, value: Tag };
 </script>
+
+{#snippet ratingLabel(field: Pick<RatingField, 'label' | 'description'>)}
+	<span class="flex min-w-0 items-center gap-0.5">
+		<span class="font-medium text-ink">{field.label}</span>
+		<HelpTip label={field.label} text={field.description} />
+	</span>
+{/snippet}
+
+{#snippet ratingValue(value: number, color = 'text-accent')}
+	<span class="shrink-0 whitespace-nowrap tabular-nums"
+		><span class="text-lg font-semibold leading-none {color}">{ratingFormat.format(value)}</span
+		><span class="text-xs text-muted">/5</span></span
+	>
+{/snippet}
+
+{#snippet ratingBars(
+	fields: readonly RatingField[],
+	options: { wide?: boolean; muted?: boolean } = {}
+)}
+	<ul class="grid gap-x-10 gap-y-3 {options.wide ? 'sm:grid-cols-2' : ''}">
+		{#each fields as field (field.key)}
+			<li class="min-w-0 space-y-1">
+				<div class="flex items-center justify-between gap-3 text-sm">
+					{@render ratingLabel(field)}
+					{@render ratingValue(field.value)}
+				</div>
+				<RatingCells value={field.value} compact muted={options.muted} />
+			</li>
+		{/each}
+	</ul>
+{/snippet}
 
 <section class="page-shell">
 	{#if demo}
@@ -138,14 +193,12 @@
 					</a>
 				{/if}
 				<div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-					<div class="flex shrink-0 items-center gap-4">
-						<RatingMug
-							rating={bar.rating}
-							label={bar.sodaRatings ? 'Läskens helhetsbetyg' : 'Helhetsbetyg'}
-							large
-							words
-						/>
-					</div>
+					<RatingMug
+						rating={bar.rating}
+						label={isSodaReview(bar) ? 'Läskens helhetsbetyg' : 'Helhetsbetyg'}
+						large
+						words
+					/>
 					{#if types.length}
 						<div role="group" aria-label="Dryckens egenskaper">
 							<DrinkTypeIcons drink={bar} interactive />
@@ -162,7 +215,11 @@
 				{#if beerPriceDisplay?.note}<p class="mt-1 text-sm text-muted">
 						{beerPriceDisplay.note}
 					</p>{/if}
-				<div class="mt-3"><RepurchasePotential score={bar.repurchasePotential} /></div>
+				{#if bar.repurchasePotential !== undefined}
+					<div class="mt-3">
+						<RepurchasePotential score={bar.repurchasePotential} tasting={!!bar.sodaTasting} />
+					</div>
+				{/if}
 				<div
 					class="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-line pt-5 text-sm text-secondary"
 				>
@@ -196,58 +253,110 @@
 				{/if}
 			</div>
 
-			<section class="space-y-4 border-t border-line pt-6" aria-labelledby="ratings-heading">
-				<h2 id="ratings-heading" class="text-xl font-semibold text-ink">
-					{bar.sodaRatings ? 'Läskbetyg' : 'Betygsfördelning'}
-				</h2>
-				<ul class="grid gap-x-10 gap-y-4 sm:grid-cols-2">
-					{#each ratingFields as field (field.key)}
-						<li class="min-w-0">
-							<div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
-								<span class="flex items-center gap-1 text-secondary">
-									<span>{field.label}</span>
-									<HelpTip
-										label={field.label}
-										text={`${field.description}${field.key === 'sweetness' && balance !== undefined ? ` Sötmabalans: ${formatRating(balance)}. Perfekt sötma (3) ger högst poäng.` : ''}`}
-									/>
-								</span>
-								<span class="shrink-0 font-semibold tabular-nums text-ink"
-									>{formatRating(field.value)}</span
+			{#if bar.sodaTasting}
+				{@const tasting = bar.sodaTasting}
+				<div class="grid items-start gap-x-10 gap-y-6 border-t border-line pt-6 md:grid-cols-2">
+					<section class="min-w-0 space-y-3" aria-labelledby="ratings-heading">
+						<h2 id="ratings-heading" class="text-base font-semibold text-ink">Delbetyg</h2>
+						{@render ratingBars(
+							TASTING_RATING_METRICS.map((metric) => ({
+								...metric,
+								value: tasting.ratings[metric.key],
+								description: `${metric.description} ${metric.weight} % av helhetsbetyget.`
+							}))
+						)}
+					</section>
+					<section
+						class="min-w-0 rounded-2xl border border-line bg-linear-to-br from-accent-soft/45 to-surface-raised/55 px-3.5 py-3 sm:px-4"
+						aria-labelledby="profile-heading"
+					>
+						<h2 id="profile-heading" class="mb-1 text-base font-semibold text-ink">Smakprofil</h2>
+						<ul class="divide-y divide-line">
+							{#each TASTING_PROFILE_METRICS as metric (metric.key)}
+								{@const value = tasting.profile[metric.key]}
+								{@const { icon: Icon, color } = profileStyles[metric.key]}
+								<li
+									class="grid min-h-10 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-1.5 py-1 text-sm sm:gap-x-3"
 								>
-							</div>
-							<RatingCells value={field.value} />
-						</li>
-					{/each}
-				</ul>
-			</section>
+									<span
+										class="grid size-7 place-items-center rounded-full bg-current/10 {color}"
+										aria-hidden="true"
+									>
+										<Icon size={16} />
+									</span>
+									{@render ratingLabel(metric)}
+									<span class="flex items-center gap-1 {color}" aria-hidden="true">
+										{#each profileSteps as step (step)}
+											<span
+												class="size-2 rounded-full {step === value
+													? 'scale-125 bg-current'
+													: step < value
+														? 'bg-current/55'
+														: 'border border-current/40'}"
+											></span>
+										{/each}
+									</span>
+									<span class="w-7 text-right">{@render ratingValue(value, color)}</span>
+								</li>
+							{/each}
+						</ul>
+					</section>
+				</div>
+			{:else}
+				<section class="space-y-3 border-t border-line pt-6" aria-labelledby="ratings-heading">
+					<h2 id="ratings-heading" class="text-base font-semibold text-ink">
+						{bar.sodaRatings ? 'Läskbetyg' : 'Betygsfördelning'}
+					</h2>
+					{@render ratingBars(ratingFields, { wide: true })}
+				</section>
+			{/if}
 
-			{#if bar.venueRatings}
-				<section
-					class="space-y-4 border-t border-line pt-6"
-					aria-labelledby="venue-ratings-heading"
-				>
-					<div class="flex items-center gap-1">
-						<h2 id="venue-ratings-heading" class="text-xl font-semibold text-ink">
-							Betyg på stället
-						</h2>
-						<HelpTip label="Betyg på stället" text="Påverkar inte läskens helhetsbetyg." />
-					</div>
-					<ul class="grid gap-x-10 gap-y-4 sm:grid-cols-2">
-						{#each VENUE_RATING_METRICS as field (field.key)}
-							<li class="min-w-0">
-								<div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
-									<span class="flex items-center gap-1 text-secondary">
-										<span>{field.label}</span>
-										<HelpTip label={field.label} text={field.description} />
-									</span>
-									<span class="shrink-0 font-semibold tabular-nums text-ink">
-										{formatRating(bar.venueRatings[field.key])}
-									</span>
+			{#if bar.sodaTasting}
+				{@const extras = bar.sodaTasting.extras}
+				<section class="space-y-3" aria-labelledby="extras-heading">
+					<h2 id="extras-heading" class="text-base font-semibold text-ink">Övriga betyg</h2>
+					<ul class="grid gap-2 sm:grid-cols-3 sm:gap-3">
+						{#each TASTING_EXTRA_METRICS as metric (metric.key)}
+							{@const Icon = extraIcons[metric.key]}
+							<li
+								class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-xl border border-line bg-surface-raised/50 px-3 py-2 sm:grid-cols-[1fr_auto] sm:px-4 sm:py-3"
+							>
+								<span
+									class="grid size-8 place-items-center rounded-full bg-accent-soft text-accent sm:col-start-1 sm:row-start-1"
+									aria-hidden="true"
+								>
+									<Icon size={17} strokeWidth={1.75} />
+								</span>
+								<div class="min-w-0 text-sm sm:col-span-2 sm:row-start-2">
+									{@render ratingLabel(metric)}
 								</div>
-								<RatingCells value={bar.venueRatings[field.key]} />
+								<span class="sm:col-start-2 sm:row-start-1">
+									{@render ratingValue(extras[metric.key])}
+								</span>
 							</li>
 						{/each}
 					</ul>
+				</section>
+			{/if}
+
+			{#if bar.venueRatings}
+				{@const venue = bar.venueRatings}
+				<section
+					class="space-y-3 border-t border-line pt-6"
+					aria-labelledby="venue-ratings-heading"
+				>
+					<h2 id="venue-ratings-heading" class="text-base font-semibold text-ink">
+						Betyg på stället
+					</h2>
+					{@render ratingBars(
+						(bar.sodaTasting ? TASTING_VENUE_RATING_METRICS : VENUE_RATING_METRICS).map(
+							(metric) => ({
+								...metric,
+								value: venue[metric.key]
+							})
+						),
+						{ wide: true, muted: true }
+					)}
 				</section>
 			{/if}
 

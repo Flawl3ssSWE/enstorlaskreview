@@ -22,6 +22,12 @@
 		SERVING_METHODS,
 		SERVING_TEMPERATURES,
 		SODA_RATING_METRICS,
+		TASTING_PROFILE_METRICS,
+		TASTING_RATING_METRICS,
+		TASTING_EXTRA_METRICS,
+		TASTING_MIN_RATING,
+		TASTING_REPURCHASE_POTENTIAL_LABELS,
+		TASTING_VENUE_RATING_METRICS,
 		VENUE_RATING_METRICS,
 		REPURCHASE_POTENTIAL_LABELS
 	} from '$lib/review-metadata';
@@ -39,17 +45,19 @@
 		suggestBrand,
 		suggestContainer,
 		suggestIce,
+		suggestSodaId,
 		suggestionValue
 	} from '$lib/utils/review-suggestions';
 	import { suggestDrinkTypes } from '$lib/utils/drink-facts';
-	import { sodaScore } from '$lib/content/soda';
+	import { isSodaReview, sodaScore, tastingScore } from '$lib/content/soda';
 	import { ratingFromAverage } from '$lib/utils/ratings';
-	import { generateSlug, generateSodaId } from '$lib/utils/slug';
+	import { generateSlug } from '$lib/utils/slug';
 	import { decodeReviewImage } from '$lib/utils/image-upload';
 	import { encodeReviewWebp } from '$lib/utils/image-encode';
 	import type {
 		DrinkContainer,
 		SodaRatingValues,
+		SodaTasting,
 		VenueRatingValues,
 		ReviewContent
 	} from '$lib/types/bar-review';
@@ -75,6 +83,7 @@
 			if (parent instanceof HTMLDetailsElement) parent.open = true;
 			parent = parent.parentElement;
 		}
+		field.closest('[role="radiogroup"]')?.scrollIntoView({ block: 'center' });
 		field.focus();
 		field.reportValidity();
 	}
@@ -106,30 +115,23 @@
 	const existingReview = $derived(
 		importedReview ?? data.reviews.find((product) => product.slug === selectedReview)
 	);
+	let sodaRatings = $state<SodaRatingValues>();
+	const minimumRating = $derived(sodaRatings ? 0 : TASTING_MIN_RATING);
+	const repurchaseLabels = $derived(
+		sodaRatings ? REPURCHASE_POTENTIAL_LABELS : TASTING_REPURCHASE_POTENTIAL_LABELS
+	);
 	let favorite = $state(false);
 	let repurchasePotential = $state<number>();
 	let repurchaseElement: HTMLSelectElement;
 	$effect(() => {
 		repurchaseElement?.setCustomValidity(
-			Number.isInteger(repurchasePotential) &&
-				repurchasePotential! >= 0 &&
-				repurchasePotential! <= 5
-				? ''
-				: 'Välj återköpspotential från 0 till 5.'
+			validRating(repurchasePotential) ? '' : `Välj återköpspotential från ${minimumRating} till 5.`
 		);
 	});
 	let title = $state('');
-	let sodaId = $state('');
-	const suggestedSodaId = $derived(generateSodaId(title).slice(0, 100).replace(/-$/, ''));
-	const normalizedSodaId = $derived(sodaId.trim() ? generateSodaId(sodaId) : suggestedSodaId);
 	let customSlug = $state('');
 	const brands = $derived([
-		...new Set(
-			[
-				...data.sodas.map((soda) => soda.brand),
-				...data.reviews.map((review) => review.beerBrand ?? '')
-			].filter(Boolean)
-		)
+		...new Set(data.reviews.flatMap(({ beerBrand }) => (beerBrand ? [beerBrand] : [])))
 	]);
 	const authors = $derived([
 		...new Set([
@@ -169,12 +171,13 @@
 	let brandOverride = $state<string>();
 	const brand = $derived(
 		suggestionValue(
-			suggestBrand(title, brands, data.sodas),
+			suggestBrand(title, brands, data.reviews),
 			brandOverride,
 			loadedSources.brand,
 			title
 		)
 	);
+	const sodaId = $derived(existingReview?.sodaId ?? suggestSodaId(title, brand, data.reviews));
 	let author = $state('Anton');
 	const suggestedSlug = $derived(generateSlug(`${title}${author.trim() ? `-${author}` : ''}`));
 	const slug = $derived(customSlug || suggestedSlug);
@@ -239,17 +242,26 @@
 	let latitude = $state<number>();
 	let longitude = $state<number>();
 	let rateVenue = $state(false);
-	let sodaRatings = $state<SodaRatingValues>(
-		Object.fromEntries(SODA_RATING_METRICS.map(({ key }) => [key, 3])) as SodaRatingValues
+	let tastingProfile = $state<Partial<SodaTasting['profile']>>({});
+	let tastingRatings = $state<Partial<SodaTasting['ratings']>>({});
+	let tastingExtras = $state<Partial<SodaTasting['extras']>>({});
+	let hasLegacySuitability = $state(false);
+	const legacyMetrics = $derived(
+		SODA_RATING_METRICS.filter(({ key }) => key !== 'mouthfeelMatch' || hasLegacySuitability)
 	);
-	const previewScore = $derived(
-		SODA_RATING_METRICS.every(({ key }) => {
-			const value = sodaRatings[key];
-			return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 5;
-		})
-			? sodaScore(sodaRatings)
-			: undefined
-	);
+	function validRating(value: number | undefined): boolean {
+		return value !== undefined && Number.isInteger(value) && value >= minimumRating && value <= 5;
+	}
+	const previewScore = $derived.by(() => {
+		if (sodaRatings) {
+			return legacyMetrics.every(({ key }) => validRating(sodaRatings?.[key]))
+				? sodaScore(sodaRatings)
+				: undefined;
+		}
+		return TASTING_RATING_METRICS.every(({ key }) => validRating(tastingRatings[key]))
+			? tastingScore(tastingRatings as SodaTasting['ratings'])
+			: undefined;
+	});
 	const previewRating = $derived(
 		previewScore === undefined ? undefined : ratingFromAverage(previewScore)
 	);
@@ -324,8 +336,8 @@
 		}
 	}
 	const inputClass = 'field mt-2';
-	const panelClass = 'glass-panel space-y-5 p-5 sm:p-7';
-	const sectionClass = $derived(wizard ? 'space-y-5 p-5 sm:p-7' : panelClass);
+	const panelClass = 'glass-panel space-y-5 p-3 sm:p-7';
+	const sectionClass = $derived(wizard ? 'space-y-5 p-3 sm:p-7' : panelClass);
 	onDestroy(() => {
 		disconnectGitHub();
 		selection++;
@@ -392,15 +404,6 @@
 		link.remove();
 		setTimeout(() => URL.revokeObjectURL(url), 1000);
 	}
-	function selectSoda(event: Event) {
-		sodaId = (event.currentTarget as HTMLSelectElement).value;
-		const soda = data.sodas.find((soda) => soda.id === sodaId);
-		if (soda) {
-			title = soda.title;
-			brandOverride = soda.brand || undefined;
-			loadedSources.brand = undefined;
-		}
-	}
 	async function importReview(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
@@ -415,7 +418,7 @@
 				JSON.parse(await file.text()),
 				file.name
 			);
-			if (!review.sodaRatings)
+			if (!isSodaReview(review))
 				throw new Error('Formuläret kan bara redigera läskrecensioner med läskbetyg.');
 			if (current !== importSelection) return;
 			selectedReview = '';
@@ -484,7 +487,6 @@
 			imageFocusY = 50;
 			imageZoom = 1;
 			title = '';
-			sodaId = '';
 			customSlug = '';
 			brandOverride = undefined;
 			location = '';
@@ -516,9 +518,11 @@
 			venueRatings = Object.fromEntries(
 				VENUE_RATING_METRICS.map(({ key }) => [key, 3])
 			) as VenueRatingValues;
-			sodaRatings = Object.fromEntries(
-				SODA_RATING_METRICS.map(({ key }) => [key, 3])
-			) as SodaRatingValues;
+			sodaRatings = undefined;
+			hasLegacySuitability = false;
+			tastingProfile = {};
+			tastingRatings = {};
+			tastingExtras = {};
 			image = undefined;
 			if (preview) URL.revokeObjectURL(preview);
 			preview = '';
@@ -533,7 +537,6 @@
 		imageFocusY = product.imageFocusY ?? 50;
 		imageZoom = product.imageZoom ?? 1;
 		title = product.title;
-		sodaId = product.sodaId ?? '';
 		customSlug = product.slug;
 		brandOverride = product.beerBrand ?? '';
 		location = product.location;
@@ -561,7 +564,11 @@
 		description = product.description;
 		favorite = product.favorite ?? false;
 		repurchasePotential = product.repurchasePotential;
-		sodaRatings = { ...product.sodaRatings! };
+		sodaRatings = product.sodaRatings && { ...product.sodaRatings };
+		hasLegacySuitability = product.sodaRatings?.mouthfeelMatch !== undefined;
+		tastingProfile = { ...product.sodaTasting?.profile };
+		tastingRatings = { ...product.sodaTasting?.ratings };
+		tastingExtras = { ...product.sodaTasting?.extras };
 		rateVenue = !!product.venueRatings;
 		venueRatings = product.venueRatings
 			? { ...product.venueRatings }
@@ -615,8 +622,6 @@
 			throw new Error('Välj en bild och vänta tills den är klar.');
 		if (data.existingSlugs.includes(slug.toLowerCase()) && slug !== existingReview?.slug)
 			throw new Error('Denna slug används redan. Välj en annan.');
-		if (sodaId.trim() && !normalizedSodaId)
-			throw new Error('Ange ett läsknamn eller ID med minst en bokstav a–z eller siffra.');
 		return prepareReviewSubmission(buildReview(), {
 			image,
 			baseline: githubBaseline ?? data.reviews.find((item) => item.slug === existingReview?.slug),
@@ -627,7 +632,7 @@
 		const now = new Date().toISOString();
 		return {
 			title: title.trim(),
-			...(normalizedSodaId ? { sodaId: normalizedSodaId } : {}),
+			...(sodaId ? { sodaId } : {}),
 			slug,
 			image: imageName,
 			location: location.trim(),
@@ -640,7 +645,15 @@
 				? { recommended: existingReview.recommended }
 				: {}),
 			...(repurchasePotential !== undefined ? { repurchasePotential } : {}),
-			sodaRatings: { ...sodaRatings },
+			...(sodaRatings
+				? { sodaRatings: { ...sodaRatings } }
+				: {
+						sodaTasting: {
+							profile: { ...tastingProfile } as SodaTasting['profile'],
+							ratings: { ...tastingRatings } as SodaTasting['ratings'],
+							extras: { ...tastingExtras } as SodaTasting['extras']
+						}
+					}),
 			...(container ? { container } : {}),
 			...(container === 'Annan' && customContainer !== undefined
 				? { customContainer: customContainer.trim() }
@@ -991,7 +1004,7 @@
 						aria-label="Förhandsvisning av totalbetyg"
 						aria-live="polite"
 						aria-atomic="true"
-						class="rounded-2xl border border-accent/30 bg-surface-raised p-5"
+						class="rounded-2xl border border-accent/30 bg-surface-raised p-3 sm:p-5"
 					>
 						<p class="text-sm font-semibold text-secondary">Recensionens totalbetyg</p>
 						{#if previewScore !== undefined && previewRating !== undefined}
@@ -1003,27 +1016,57 @@
 							</p>
 						{:else}
 							<p class="mt-2 text-sm text-secondary">
-								Fyll i alla läskbetyg med heltal mellan 0 och 5 för att se totalbetyget.
+								Fyll i alla {sodaRatings ? 'läskbetyg' : 'delbetyg'} med heltal mellan {minimumRating}
+								och 5 för att se totalbetyget.
 							</p>
 						{/if}
 					</div>
-					<details class="text-sm text-muted">
-						<summary class="cursor-pointer">Så räknas totalbetyget</summary>
-						<p class="text-secondary">
-							Ange värden från 0 till 5. Sötma: 0 = inte söt, 3 = perfekt, 5 = för söt. Kolsyra: 0 =
-							avslagen, 5 = väldigt kolsyrad. Mer kolsyra ger högre poäng i totalbetyget. Konsistens
-							beskriver hur rinnig läsken är. Passande konsistens mäter hur väl den passar läsken.
-							För smak, passande konsistens, drickbarhet, matchar namnet och prisvärdhet är 5 bäst.
-							Använd heltal. Smak väger 30 %, sötmabalans, kolsyra och drickbarhet 15 % vardera,
-							passande konsistens och matchar namnet 10 % vardera, prisvärdhet 5 %. Varje recension
-							har en egen författare, ett eget pris och en egen sida.
+					{#if sodaRatings}
+						<p class="text-sm text-secondary">
+							Den här recensionen använder sin ursprungliga betygsmodell.
 						</p>
-					</details>
-					<RatingInputs
-						metrics={SODA_RATING_METRICS.filter(({ key }) => key !== 'value')}
-						bind:values={sodaRatings}
-						prefix="soda"
-					/>
+						<RatingInputs
+							metrics={legacyMetrics.filter(({ key }) => key !== 'value')}
+							bind:values={sodaRatings}
+							prefix="soda"
+							minimum={0}
+						/>
+					{:else}
+						<fieldset class="space-y-3">
+							<legend class="font-semibold">Smakprofil</legend>
+							<p class="text-sm text-secondary">
+								Ange hur tydligt varje egenskap märks. En femma betyder hög intensitet.
+							</p>
+							<RatingInputs
+								metrics={TASTING_PROFILE_METRICS}
+								bind:values={tastingProfile}
+								prefix="profile"
+							/>
+						</fieldset>
+						<fieldset class="space-y-3">
+							<legend class="font-semibold">Delbetyg</legend>
+							<p class="text-sm text-secondary">
+								Bedöm själva drycken. 1 är svagt, 3 är bra och 5 är utmärkt.
+							</p>
+							<RatingInputs
+								metrics={TASTING_RATING_METRICS.map((metric) => ({
+									...metric,
+									description: `${metric.description} ${metric.weight} % av helhetsbetyget.`
+								}))}
+								bind:values={tastingRatings}
+								prefix="tasting"
+							/>
+						</fieldset>
+						<fieldset class="space-y-3">
+							<legend class="font-semibold">Övriga betyg</legend>
+							<p class="text-sm text-secondary">Visas separat från helhetsbetyget.</p>
+							<RatingInputs
+								metrics={TASTING_EXTRA_METRICS.filter(({ key }) => key !== 'value')}
+								bind:values={tastingExtras}
+								prefix="extra"
+							/>
+						</fieldset>
+					{/if}
 					<label class="flex items-center gap-3"
 						><input type="checkbox" bind:checked={favorite} class="size-5 accent-ember" />Jag väljer
 						den här läsken som en läskfavorit</label
@@ -1043,7 +1086,8 @@
 							aria-describedby="repurchase-potential-help"
 						>
 							<option value="">Välj återköpspotential</option>
-							{#each REPURCHASE_POTENTIAL_LABELS as label, score}
+							{#each repurchaseLabels as label, index}
+								{@const score = index + minimumRating}
 								<option value={score}>{score}/5 – {label}</option>
 							{/each}
 						</select>
@@ -1066,23 +1110,6 @@
 				<section class={sectionClass} data-step="2" hidden={wizard && step !== 2}>
 					<h2 tabindex="-1" class="scroll-mt-32 text-xl font-semibold">Data</h2>
 					<p id="automatic-field-help" class="sr-only">Automatiskt förslag. Du kan ändra värdet.</p>
-					{#if data.sodas.length}
-						<label class="block" for="linked-soda"
-							>Läsk att länka recensionen till (valfritt)
-							<select
-								id="linked-soda"
-								value={data.sodas.some((soda) => soda.id === normalizedSodaId)
-									? normalizedSodaId
-									: ''}
-								onchange={selectSoda}
-								class={inputClass}
-							>
-								<option value="">Ny läsk (automatiskt ID)</option>
-								{#each data.sodas as soda}<option value={soda.id}>{soda.title} ({soda.id})</option
-									>{/each}
-							</select>
-						</label>
-					{/if}
 					<label class="block" for="title"
 						>Läskens namn / rubrik<input
 							id="title"
@@ -1151,11 +1178,20 @@
 							/></DrinkAmountFields
 						>
 					{/key}
-					<RatingInputs
-						metrics={SODA_RATING_METRICS.filter(({ key }) => key === 'value')}
-						bind:values={sodaRatings}
-						prefix="soda"
-					/>
+					{#if sodaRatings}
+						<RatingInputs
+							metrics={legacyMetrics.filter(({ key }) => key === 'value')}
+							bind:values={sodaRatings}
+							prefix="soda"
+							minimum={0}
+						/>
+					{:else}
+						<RatingInputs
+							metrics={TASTING_EXTRA_METRICS.filter(({ key }) => key === 'value')}
+							bind:values={tastingExtras}
+							prefix="extra"
+						/>
+					{/if}
 					<fieldset class="space-y-3">
 						<legend class="font-semibold">Serveringsmetod (valfritt, välj flera)</legend>
 						<div class="flex flex-wrap gap-x-5 gap-y-2">
@@ -1342,7 +1378,8 @@
 							Platsbetygen visas separat och påverkar inte läskens helhetsbetyg.
 						</p>
 						{#if rateVenue}<RatingInputs
-								metrics={VENUE_RATING_METRICS}
+								metrics={sodaRatings ? VENUE_RATING_METRICS : TASTING_VENUE_RATING_METRICS}
+								minimum={minimumRating}
 								bind:values={venueRatings}
 								prefix="venue"
 							/>{/if}
@@ -1380,29 +1417,6 @@
 					</details>
 					<details class="space-y-5">
 						<summary>Avancerade inställningar</summary>
-						<label class="block" for="soda-id"
-							>Läsk-ID (automatiskt)
-							<input
-								id="soda-id"
-								maxlength="100"
-								value={sodaId || suggestedSodaId}
-								oninput={(event) => (sodaId = event.currentTarget.value)}
-								class={inputClass}
-								placeholder="Till exempel pepsi-max-tropical"
-								aria-describedby="soda-id-help soda-id-preview"
-							/>
-						</label>
-						<p id="soda-id-help" class="text-sm text-muted">
-							Lämna tomt för automatiskt läsk-ID. Använd samma ID för recensioner av samma läsk.
-						</p>
-						<p id="soda-id-preview" class="text-sm text-secondary" aria-live="polite">
-							{#if normalizedSodaId}Läsk-ID som sparas: <span class="font-semibold text-ink"
-									>{normalizedSodaId}</span
-								>
-							{:else if sodaId.trim()}Ange ett läsknamn eller ID med minst en bokstav a–z eller
-								siffra.
-							{:else}ID skapas när du anger läskens namn.{/if}
-						</p>
 						<label class="block" for="slug"
 							>Slug / filnamn<input
 								id="slug"
@@ -1552,18 +1566,19 @@
 				</section>
 				{#if wizard}
 					<div
-						class="sticky bottom-0 z-20 flex justify-end gap-2 rounded-b-3xl border-t border-line bg-surface/95 px-5 py-4 backdrop-blur sm:px-7"
+						class="sticky bottom-0 z-20 flex justify-end gap-2 rounded-b-3xl border-t border-line bg-surface/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-7 sm:py-4"
 					>
 						{#if step > 0}<button
 								type="button"
 								onclick={() => goToStep(step - 1)}
-								class="btn btn-secondary"
+								class="btn btn-secondary flex-1 sm:flex-none"
 								><ArrowLeft size={16} aria-hidden="true" />Föregående</button
 							>{/if}
 						{#if step < steps.length - 1}<button
 								type="button"
 								onclick={nextStep}
-								class="btn btn-primary">Nästa<ArrowRight size={16} aria-hidden="true" /></button
+								class="btn btn-primary flex-1 sm:flex-none"
+								>Nästa<ArrowRight size={16} aria-hidden="true" /></button
 							>{/if}
 					</div>
 				{/if}

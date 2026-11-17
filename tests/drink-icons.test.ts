@@ -7,7 +7,7 @@ test('header category symbols explain themselves on focus and tap without invent
 	await page.goto('testsoda/');
 	const facts = page.getByRole('region', { name: 'Drycksfakta', exact: true });
 	const symbols = page.getByRole('group', { name: 'Dryckens egenskaper', exact: true });
-	await expect(facts.getByRole('button')).toHaveCount(0);
+	await expect(facts.getByRole('button', { name: 'Om energidryck', exact: true })).toHaveCount(0);
 	const symbolsBox = await symbols.boundingBox();
 	const reviewBox = await page
 		.getByRole('heading', { name: 'Recension', exact: true })

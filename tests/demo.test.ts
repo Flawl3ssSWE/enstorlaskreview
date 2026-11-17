@@ -29,17 +29,58 @@ test('permanent demo shares the full review layout without entering published co
 		await expect(page.getByRole('heading', { name: demoTitle, exact: true })).toBeVisible();
 		const facts = page.getByRole('region', { name: 'Drycksfakta', exact: true });
 		await expect(facts.locator('dt')).toHaveCount(9);
+		await expect(facts.locator('svg[data-symbol="measure"]')).toBeVisible();
+		await expect(facts.locator('svg[data-symbol="ice"]')).toBeVisible();
+		await expect(facts.locator('svg.lucide-snowflake')).toBeVisible();
 		await expect(facts).toContainText('Återanvändbar provsmakningsflaska');
-		await expect(facts).toContainText('Originalförpackning · Glas · Sugrör · Mugg');
-		await expect(facts).toContainText('160 mg i hela förpackningen');
-		await expect(facts).toContainText('20 g i hela förpackningen');
-		await expect(facts).toContainText('10 g i hela förpackningen');
 		await expect(
-			page.getByRole('region', { name: 'Läskbetyg', exact: true }).getByRole('listitem')
-		).toHaveCount(8);
+			facts
+				.getByRole('term')
+				.filter({ hasText: 'Serveringsmetod:' })
+				.getByRole('button', { name: 'Om serveringsmetod', exact: true })
+		).toBeVisible();
+		const methods = facts.getByRole('list');
+		await expect(methods.getByRole('button')).toHaveCount(4);
+		for (const method of ['originalförpackning', 'glas', 'sugrör', 'mugg']) {
+			await expect(
+				methods.getByRole('button', { name: `Om ${method}`, exact: true })
+			).toBeVisible();
+		}
+		await expect(methods).toHaveText('', { useInnerText: true });
 		await expect(
-			page.getByRole('region', { name: 'Betyg på stället', exact: true }).getByRole('listitem')
-		).toHaveCount(5);
+			methods
+				.getByRole('button', { name: 'Om mugg', exact: true })
+				.locator('svg[data-symbol="mug"]')
+		).toBeVisible();
+		await expect(
+			methods
+				.getByRole('button', { name: 'Om sugrör', exact: true })
+				.locator('svg[data-symbol="straw"]')
+		).toBeVisible();
+		await expect(facts).toContainText('(160 mg totalt)');
+		await expect(facts).toContainText('(20 g totalt)');
+		await expect(facts).toContainText('(10 g totalt)');
+		await expect(page.getByRole('region', { name: 'Recension', exact: true })).toBeVisible();
+		const profile = page.getByRole('region', { name: 'Smakprofil', exact: true });
+		await expect(profile.getByRole('listitem')).toHaveCount(5);
+		await expect(profile.getByRole('listitem').filter({ hasText: 'Surhet' })).toContainText('4/5');
+		const ratings = page.getByRole('region', { name: 'Delbetyg', exact: true });
+		await expect(ratings.getByRole('listitem')).toHaveCount(4);
+		await expect(ratings.getByRole('listitem').filter({ hasText: 'Balans' })).toContainText('5/5');
+		await expect(
+			page.getByText(/Skalan visar|Viktad poäng|Visas separat från helhetsbetyget/)
+		).toHaveCount(0);
+		const extras = page.getByRole('region', { name: 'Övriga betyg', exact: true });
+		await expect(extras.getByRole('listitem')).toHaveCount(3);
+		await expect(extras.getByRole('listitem').filter({ hasText: 'Förpackningen' })).toBeVisible();
+		await expect(extras.getByRole('listitem').filter({ hasText: 'Förpackningen' })).toContainText(
+			'5/5'
+		);
+		const venue = page.getByRole('region', { name: 'Betyg på stället', exact: true });
+		await expect(venue.getByRole('listitem')).toHaveCount(5);
+		const service = venue.getByRole('listitem').filter({ hasText: 'Service' });
+		await expect(service).toBeVisible();
+		await expect(service).toContainText('5/5');
 		await expect(page.getByRole('link', { name: 'Visa historik på GitHub' })).toHaveCount(0);
 		await expect(page.getByRole('link', { name: 'Tillbaka till recensioner' })).toHaveAttribute(
 			'href',
@@ -65,4 +106,41 @@ test('permanent demo shares the full review layout without entering published co
 	}
 	const oldRoute = await request.get('demo-lask/');
 	expect(oldRoute.status()).toBe(404);
+});
+
+test('drink facts explain their symbols on hover and keyboard focus', async ({ page }) => {
+	await page.goto('demo/');
+	const facts = page.getByRole('region', { name: 'Drycksfakta', exact: true });
+	const straw = facts.getByRole('button', { name: 'Om sugrör', exact: true });
+	const tooltip = facts.getByRole('tooltip');
+	await expect(tooltip).toBeHidden();
+	await straw.hover();
+	await expect(tooltip).toHaveText('Läsken dracks med sugrör.');
+	await page.mouse.move(0, 0);
+	await expect(tooltip).toBeHidden();
+	await straw.focus();
+	await expect(tooltip).toBeVisible();
+	await page.keyboard.press('Escape');
+	await expect(tooltip).toBeHidden();
+});
+
+test.describe('drink facts on touch screens', () => {
+	test.use({ hasTouch: true, isMobile: true, viewport: { width: 320, height: 812 } });
+
+	test('a tap explains a symbol and tapping outside closes it', async ({ page }) => {
+		await page.goto('demo/');
+		const facts = page.getByRole('region', { name: 'Drycksfakta', exact: true });
+		await facts.getByRole('button', { name: 'Om serveringstemperatur', exact: true }).tap();
+		const tooltip = facts.getByRole('tooltip');
+		await expect(tooltip).toHaveText('Läsken provades kylskåpskall.');
+		await expect(tooltip).toBeInViewport({ ratio: 1 });
+		await facts.getByText('Kylskåpskall', { exact: true }).tap();
+		await expect(tooltip).toBeHidden();
+		await facts.getByRole('button', { name: 'Om servering', exact: true }).tap();
+		await expect(tooltip).toHaveText('Läsken serverades med is.');
+		await facts.getByText('Med is', { exact: true }).tap();
+		await expect(tooltip).toBeHidden();
+		await facts.getByRole('button', { name: 'Om mugg', exact: true }).tap();
+		await expect(tooltip).toHaveText('Läsken serverades i en mugg.');
+	});
 });
