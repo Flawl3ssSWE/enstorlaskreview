@@ -21,6 +21,16 @@
 			</section>
 
 			<section>
+				<h2 class="text-2xl font-semibold text-ink">Recenserar ni öl också?</h2>
+				<p class="mt-2 text-secondary">
+					Vi recenserar läsk. En Stor Läsk Review är en parodi på
+					<a href="https://enstorstarkreview.se/" class="font-semibold underline underline-offset-4"
+						>En Stor Stark Review</a
+					>, där du hittar ölrecensionerna.
+				</p>
+			</section>
+
+			<section>
 				<h2 class="text-2xl font-semibold text-ink">Hur fungerar betygen?</h2>
 				<p class="mt-2 text-secondary">
 					Läsken får ett helhetsbetyg mellan 0 och 3 muggar. För nya recensioner väger vi ihop fyra
