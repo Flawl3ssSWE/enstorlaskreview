@@ -1,5 +1,6 @@
 import { stripControlCharacters } from '../utils/review-text.ts';
 import {
+	ADDITIONAL_VENUE_RATING_KEYS,
 	DRINK_CONTAINERS,
 	SERVING_METHODS,
 	SERVING_TEMPERATURES,
@@ -254,10 +255,20 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 		}
 		if (REVIEW_RATING_METRICS.some(({ key }) => data[key] !== undefined))
 			fail('Blanda inte läskbetyg med äldre barbetyg.');
-		if (data.venueRatings !== undefined)
-			validateRatings(data.venueRatings, VENUE_RATING_METRICS, 'Platsbetyg', {
-				minimum: minimumRating
+		if (data.venueRatings !== undefined) {
+			const venueRatings = validateObject(
+				data.venueRatings,
+				VENUE_RATING_METRICS.map(({ key }) => key),
+				'Platsbetyg'
+			);
+			const hasAdditionalRatings = ADDITIONAL_VENUE_RATING_KEYS.some(
+				(key) => venueRatings[key] !== undefined
+			);
+			validateRatings(venueRatings, VENUE_RATING_METRICS, 'Platsbetyg', {
+				minimum: minimumRating,
+				optional: hasAdditionalRatings ? [] : ADDITIONAL_VENUE_RATING_KEYS
 			});
+		}
 	} else {
 		if (data.venueRatings !== undefined) fail('Platsbetyg kräver läskbetyg.');
 		for (const { key } of REVIEW_RATING_METRICS) {

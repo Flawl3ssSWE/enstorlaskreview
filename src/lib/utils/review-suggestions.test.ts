@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+	fullSodaName,
 	suggestBrand,
 	suggestContainer,
 	suggestIce,
 	suggestSodaId,
 	suggestionValue
 } from './review-suggestions';
+
+it('combines brand and name without repeating a brand already in the name', () => {
+	expect(fullSodaName('Zero', 'Coca Cola')).toBe('Coca Cola Zero');
+	expect(fullSodaName('Coca-Cola Zero', 'Coca Cola')).toBe('Coca-Cola Zero');
+	expect(fullSodaName('Hallonsoda', '')).toBe('Hallonsoda');
+});
 
 describe('editor suggestions', () => {
 	it('matches normalized brand prefixes, preferring the longest', () => {

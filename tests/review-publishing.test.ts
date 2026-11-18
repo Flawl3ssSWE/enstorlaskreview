@@ -178,8 +178,11 @@ async function fillReview(page: Page, wizard: boolean) {
 	await page.locator('#repurchase-potential').selectOption('3');
 	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 	await page.getByLabel('Läskens namn / rubrik').fill('Publicerad testläsk');
+	await page.getByLabel('Märke', { exact: true }).fill('Testläsk');
 	await page.getByLabel('Författare', { exact: true }).fill('Test');
 	await page.locator('#review-1-volume').selectOption('330');
+	await page.getByLabel('Serveringstemperatur', { exact: true }).selectOption('Kylskåpskall');
+	await page.getByLabel('Is', { exact: true }).selectOption('false');
 	await page.locator('#review-1-price').fill('20');
 	await fillRating(page, 'extra-value', 3);
 	if (wizard) await page.getByRole('button', { name: 'Nästa', exact: true }).click();

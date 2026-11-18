@@ -28,24 +28,29 @@ export function defaultCalibrationWeights(model: CalibrationModel): CalibrationW
 	return Object.fromEntries(CALIBRATION_METRICS[model].map(({ key, weight }) => [key, weight]));
 }
 
+export function calibratedScore(
+	model: CalibrationModel,
+	weights: CalibrationWeights,
+	valueFor: (key: string) => number
+): number | undefined {
+	const metrics = CALIBRATION_METRICS[model];
+	const total = metrics.reduce((sum, { key }) => sum + weights[key], 0);
+	if (total === 0 || metrics.every(({ key, weight }) => weights[key] === weight)) return;
+	return metrics.reduce((sum, { key }) => sum + valueFor(key) * weights[key], 0) / total;
+}
+
 export function calibrateOverview(
 	review: ReturnType<typeof reviewOverview>,
 	model: CalibrationModel,
 	weights: CalibrationWeights
 ): ReturnType<typeof reviewOverview> {
 	if (review.scoreModel !== model) return review;
-	const metrics = CALIBRATION_METRICS[model];
-	const total = metrics.reduce((sum, { key }) => sum + weights[key], 0);
-	if (total === 0 || metrics.every(({ key, weight }) => weights[key] === weight)) return review;
-
-	const score =
-		metrics.reduce((sum, { key }) => {
-			const value =
-				key === 'sweetnessBalance'
-					? review.sweetnessBalance!
-					: review.metrics.find((metric) => metric.key === key)!.value!;
-			return sum + value * weights[key];
-		}, 0) / total;
+	const score = calibratedScore(model, weights, (key) =>
+		key === 'sweetnessBalance'
+			? review.sweetnessBalance!
+			: review.metrics.find((metric) => metric.key === key)!.value!
+	);
+	if (score === undefined) return review;
 	const next = OVERALL_RATING_LEVELS.find(({ minimum }) => minimum > score);
 	return {
 		...review,

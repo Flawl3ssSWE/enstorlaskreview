@@ -349,11 +349,11 @@
 						Betyg på stället
 					</h2>
 					{@render ratingBars(
-						(bar.sodaTasting ? TASTING_VENUE_RATING_METRICS : VENUE_RATING_METRICS).map(
-							(metric) => ({
-								...metric,
-								value: venue[metric.key]
-							})
+						(bar.sodaTasting ? TASTING_VENUE_RATING_METRICS : VENUE_RATING_METRICS).flatMap(
+							(metric) => {
+								const value = venue[metric.key];
+								return value === undefined ? [] : [{ ...metric, value }];
+							}
 						),
 						{ wide: true, muted: true }
 					)}

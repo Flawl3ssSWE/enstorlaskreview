@@ -171,12 +171,22 @@ export const TASTING_EXTRA_METRICS = [
 	}
 ] as const;
 
-export const VENUE_RATING_METRICS = REVIEW_RATING_METRICS.filter(
-	(
-		metric
-	): metric is (typeof REVIEW_RATING_METRICS)[number] & {
-		key: import('./types/bar-review').VenueRatingKey;
-	} => ['atmosphere', 'service', 'selection', 'cleanliness', 'soundLevel'].includes(metric.key)
+export const ADDITIONAL_VENUE_RATING_KEYS = ['quality', 'price', 'barhopPotential'] as const;
+
+const venueDescriptions: Partial<Record<ReviewRatingKey, string>> = {
+	quality: 'Hur väl serveras läsken? Bedöm till exempel temperatur och bevarad kolsyra.',
+	price:
+		'Hur rimliga är ställets läskpriser jämfört med andra barers, för liknande läsk och mängd?',
+	barhopPotential: 'Hur lätt är det att gå vidare härifrån till andra barer?'
+};
+
+export const VENUE_RATING_METRICS = REVIEW_RATING_METRICS.map((metric) => ({
+	...metric,
+	description: venueDescriptions[metric.key] ?? metric.description
+}));
+
+export const LEGACY_VENUE_RATING_METRICS = VENUE_RATING_METRICS.filter(
+	({ key }) => !ADDITIONAL_VENUE_RATING_KEYS.some((additional) => additional === key)
 );
 
 export const TASTING_VENUE_RATING_METRICS = VENUE_RATING_METRICS.map((metric) =>

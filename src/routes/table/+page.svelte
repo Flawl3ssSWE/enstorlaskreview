@@ -5,6 +5,7 @@
 		OVERALL_RATING_LEVELS,
 		SODA_RATING_METRICS,
 		TASTING_EXTRA_METRICS,
+		TASTING_MIN_RATING,
 		TASTING_PROFILE_METRICS,
 		TASTING_RATING_METRICS,
 		REVIEW_RATING_METRICS
@@ -12,20 +13,37 @@
 	import RatingMug from '$lib/components/RatingMug.svelte';
 	import {
 		CALIBRATION_METRICS,
+		calibratedScore,
 		calibrateOverview,
 		defaultCalibrationWeights,
 		type CalibrationModel
 	} from '$lib/content/score-calibration';
+	import { tastingScore } from '$lib/content/soda';
 	import { formatAuthors } from '$lib/utils/authors';
+	import { ratingFromAverage } from '$lib/utils/ratings';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 	let search = $state('');
+	let testRatings = $state({ taste: 3, balance: 3, aftertaste: 3, mouthfeel: 3 });
+	const testOptions = Array.from(
+		{ length: 6 - TASTING_MIN_RATING },
+		(_, i) => i + TASTING_MIN_RATING
+	);
+	const testScore = $derived(tastingScore(testRatings));
 	let calibrationModel = $state<CalibrationModel>('v2');
 	let modelWeights = $state({
 		v2: defaultCalibrationWeights('v2'),
 		weighted: defaultCalibrationWeights('weighted')
 	});
+	const testMetricValues = $derived(
+		Object.fromEntries(
+			TASTING_RATING_METRICS.map(({ key }) => [`v2-rating-${key}`, testRatings[key]])
+		)
+	);
+	const testCalibratedScore = $derived(
+		calibratedScore('v2', modelWeights.v2, (key) => testMetricValues[key]) ?? testScore
+	);
 	const calibrationMetrics = $derived(CALIBRATION_METRICS[calibrationModel]);
 	const weights = $derived(modelWeights[calibrationModel]);
 	const weightTotal = $derived(calibrationMetrics.reduce((sum, { key }) => sum + weights[key], 0));
@@ -205,6 +223,43 @@
 			</details>
 		</details>
 	</section>
+
+	<details class="glass-panel p-5 sm:p-6">
+		<summary class="min-h-11 cursor-pointer py-2 text-xl font-semibold text-ink">
+			Testa en egen läsk
+		</summary>
+		<p class="mt-2 text-sm text-secondary">
+			Prova delbetyg och jämför med dina v2-vikter under Kalibrera poängen.
+		</p>
+		<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+			{#each TASTING_RATING_METRICS as { key, label } (key)}
+				<div class="min-w-0 space-y-2">
+					<label class="field-label" for={`test-soda-${key}`}>{label}</label>
+					<select id={`test-soda-${key}`} class="field" bind:value={testRatings[key]}>
+						{#each testOptions as value (value)}
+							<option {value}>{value}</option>
+						{/each}
+					</select>
+				</div>
+			{/each}
+		</div>
+		<div class="mt-4 text-ink" role="status" aria-label="Testläskens resultat" aria-atomic="true">
+			<dl class="grid gap-3 sm:grid-cols-2">
+				{#each [{ label: 'Standardvikter', score: testScore }, { label: 'Dina v2-vikter', score: testCalibratedScore }] as { label, score } (label)}
+					<div class="rounded-xl border border-line bg-surface-raised px-4 py-2">
+						<dt class="text-sm text-secondary">{label}</dt>
+						<dd class="flex flex-wrap items-center gap-x-4 gap-y-2">
+							<span class="font-semibold tabular-nums">{number(score)}/5 poäng</span>
+							<RatingMug
+								rating={ratingFromAverage(score)}
+								label={`Helhetsbetyg med ${label.toLocaleLowerCase('sv')}`}
+							/>
+						</dd>
+					</div>
+				{/each}
+			</dl>
+		</div>
+	</details>
 
 	<details class="glass-panel p-5 sm:p-6">
 		<summary class="min-h-11 cursor-pointer py-2 text-xl font-semibold text-ink">

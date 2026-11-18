@@ -40,12 +40,15 @@ async function fillReview(page: import('@playwright/test').Page) {
 	await page.getByText('Stället (valfritt)', { exact: true }).click();
 	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	await page.getByLabel('Läskens namn / rubrik').fill('Ny hallonsoda');
+	await page.getByLabel('Märke', { exact: true }).fill('Ny hallonsoda');
 	await page.getByLabel('Författare', { exact: true }).fill('Test');
 	await page.getByLabel('Fri text').fill('**Frisk** och lättdrucken.');
 	await fillTasting(page);
 	await fillRating(page, 'extra-name', 3);
 	await fillRating(page, 'extra-packaging', 3);
 	await page.locator('#review-1-volume').selectOption('330');
+	await page.getByLabel('Serveringstemperatur', { exact: true }).selectOption('Kylskåpskall');
+	await page.getByLabel('Is', { exact: true }).selectOption('false');
 	await page.locator('#review-1-price').fill('20');
 	await fillRating(page, 'extra-value', 3);
 	await page.locator('#repurchase-potential').selectOption('3');
@@ -501,7 +504,21 @@ test('JSON import supports a saved review outside the published collection', asy
 	await expect(page.getByText(/Välj bilden sparad-lask.png/)).toBeVisible();
 	const { json } = await exportJson(page);
 	expect(json).toMatchObject({ ...saved, updatedAt: expect.any(String) });
+	expect(json.venueRatings).toEqual(saved.venueRatings);
 	expect(Date.parse(json.updatedAt)).toBeGreaterThan(Date.parse(saved.updatedAt));
+	await page
+		.getByRole('button', { name: 'Lägg till kvalitet, prisvärdhet och barhoppotential' })
+		.click();
+	await expect(page.locator('#venue-quality')).toHaveValue('');
+	await page.locator('#venue-quality').fill('2');
+	await page.locator('#venue-price').fill('4');
+	await page.locator('#venue-barhopPotential').fill('3');
+	expect((await exportJson(page)).json.venueRatings).toEqual({
+		...saved.venueRatings,
+		quality: 2,
+		price: 4,
+		barhopPotential: 3
+	});
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda-robin');
 	await expect(page.getByLabel('Författare', { exact: true })).toHaveValue('Robin');
 	expect((await exportJson(page)).json.slug).toBe('testsoda-robin');
@@ -775,6 +792,7 @@ test('generator links a matching soda automatically and preserves the link when 
 }) => {
 	await fillReview(page);
 	await page.getByLabel('Läskens namn / rubrik').fill('Testläsk');
+	await page.getByLabel('Märke', { exact: true }).fill('Testläsk');
 	await expect(page.locator('#linked-soda, #soda-id')).toHaveCount(0);
 	await expect(page.getByLabel('Författare', { exact: true })).toHaveValue('Test');
 	await expect(page.getByLabel('Pris i kronor', { exact: true })).toHaveValue('20');
@@ -812,6 +830,10 @@ test('V2 preview, export and import preserve the four quality scores and separat
 	await page.locator('#extra-value').fill('5');
 	await expect(page.getByLabel('Smakord (valfritt)')).toHaveCount(0);
 	await page.getByLabel('Betygsätt stället också').check();
+	await expect(page.locator('#venue-quality')).toHaveValue('');
+	await expect(page.locator('#venue-quality')).toHaveAttribute('required', '');
+	await expect(page.locator('#venue-price')).toHaveAttribute('required', '');
+	await expect(page.locator('#venue-barhopPotential')).toHaveAttribute('required', '');
 	for (const metric of VENUE_RATING_METRICS) await page.locator(`#venue-${metric.key}`).fill('1');
 	await expect(preview.getByText('2/3', { exact: true })).toBeVisible();
 	await expect(preview).toContainText('Viktad poäng: 4,25/5');
@@ -823,6 +845,7 @@ test('V2 preview, export and import preserve the four quality scores and separat
 		extras: { name: 1, packaging: 3, value: 5 }
 	});
 	expect(json).not.toHaveProperty('sodaRatings');
+	expect(json.venueRatings).toMatchObject({ quality: 1, price: 1, barhopPotential: 1 });
 	await page.locator('#tasting-balance').fill('');
 	await expect(preview).toContainText('Fyll i alla delbetyg');
 	await page.locator('#tasting-balance').fill('0');
@@ -857,7 +880,9 @@ test('V2 preview, export and import preserve the four quality scores and separat
 	await expect(page.locator('#profile-carbonation')).toHaveValue('1');
 	await expect(page.locator('#extra-packaging')).toHaveValue('3');
 	await expect(preview).toContainText('Viktad poäng: 4,25/5');
-	expect((await exportJson(page)).json.sodaTasting).toEqual(json.sodaTasting);
+	const reexported = (await exportJson(page)).json;
+	expect(reexported.sodaTasting).toEqual(json.sodaTasting);
+	expect(reexported.venueRatings).toEqual(json.venueRatings);
 	expect(json.sodaTasting).not.toHaveProperty('notes');
 	await page.getByLabel('Redigera en befintlig recension').selectOption('hallonsoda');
 	await expect(page.locator('#soda-mouthfeelMatch')).toHaveCount(0);
@@ -964,6 +989,20 @@ test('nutrient bases convert, export, reload and reset independently', async ({ 
 	await expect(page.locator('#protein')).toHaveValue('');
 });
 
+test('home cards show and search the combined soda name', async ({ page }) => {
+	await page.goto('./');
+	const card = page.locator('a[href$="/hallonsoda/"]');
+	await expect(
+		card.getByRole('heading', { name: 'Testläsk Hallonsoda', exact: true })
+	).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Testbaren', exact: true })).toBeVisible();
+	await page.getByPlaceholder('Sök läsk, märke eller smak').fill('Testläsk Hallonsoda');
+	await expect(card).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Testläsk', exact: true })).toHaveCount(0);
+	await card.click();
+	await expect(page.getByRole('heading', { name: 'Hallonsoda', exact: true })).toBeVisible();
+});
+
 test('home drink filters combine, survive reload and clear, with compact cards', async ({
 	page
 }) => {
@@ -1038,8 +1077,10 @@ test('serving details support multiple methods, imports, edits and reset without
 		page.getByRole('checkbox', { name: 'Originalförpackning', exact: true })
 	).not.toBeChecked();
 	await expect(page.getByRole('checkbox', { name: 'Sugrör', exact: true })).not.toBeChecked();
-	await expect(page.locator('#serving-temperature option:checked')).toHaveText('Ej angiven');
-	await expect(page.locator('#served-with-ice option:checked')).toHaveText('Ej angivet');
+	await expect(page.locator('#serving-temperature option:checked')).toHaveText('Välj temperatur');
+	await expect(page.locator('#served-with-ice option:checked')).toHaveText(
+		'Välj med eller utan is'
+	);
 	await page.getByLabel('Redigera en befintlig recension').selectOption('testsoda-robin');
 	const unknown = (await exportJson(page)).json;
 	expect(unknown.servingMethods).toBeUndefined();
@@ -1160,6 +1201,7 @@ test('automatic soda IDs fit within 100 characters and imports preserve saved ID
 	await fillReview(page);
 	await page.getByLabel('Författare', { exact: true }).fill('Anton');
 	await page.getByLabel('Läskens namn / rubrik').fill('Homie Synbiotic Lime/Mint');
+	await page.getByLabel('Märke', { exact: true }).fill('Homie');
 	const automatic = await exportJson(page);
 	expect(automatic.json).toMatchObject({
 		sodaId: 'homie-synbiotic-limemint',
@@ -1167,6 +1209,7 @@ test('automatic soda IDs fit within 100 characters and imports preserve saved ID
 	});
 	await page.locator('#slug').fill('langt-lasknamn-anton');
 	await page.getByLabel('Läskens namn / rubrik').fill('a'.repeat(99) + ' b'.repeat(40));
+	await page.getByLabel('Märke', { exact: true }).fill('a'.repeat(99));
 	expect((await exportJson(page)).json.sodaId).toBe('a'.repeat(99));
 	const source = JSON.parse(await readFile('tests/fixtures/content/testsoda-robin.json', 'utf8'));
 	const fileInput = page.getByLabel('Recensionens JSON-fil', { exact: true });

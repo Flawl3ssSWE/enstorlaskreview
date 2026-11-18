@@ -110,7 +110,19 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 		await expect(page.getByLabel('Författare', { exact: true })).toHaveValue('Anton');
 		await expect(page.locator('#sugar-type')).toHaveValue('sugar-free');
-		await page.getByLabel('Läskens namn / rubrik').fill('Testläsk Zero');
+		await page.getByLabel('Märke', { exact: true }).press('Tab');
+		const nameHelp = page.getByRole('button', { name: 'Om läskens namn', exact: true });
+		await expect(nameHelp).toBeFocused();
+		await expect(page.getByRole('tooltip')).toContainText(
+			'På kortet visas märke och namn tillsammans.'
+		);
+		await nameHelp.press('Tab');
+		const sodaName = page.getByLabel('Läskens namn / rubrik');
+		await expect(sodaName).toBeFocused();
+		await expect(sodaName).toHaveAccessibleDescription(
+			/På kortet visas märke och namn tillsammans/
+		);
+		await sodaName.fill('Testläsk Zero');
 		await expect(page.locator('#brand')).toHaveValue('Testläsk');
 		const brandHint = page.getByRole('button', { name: 'Automatiskt ifyllt: Märke', exact: true });
 		const brandPosition = await page.locator('#brand').boundingBox();
@@ -146,6 +158,7 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		await page.locator('#served-with-ice').selectOption({ label: 'Med is' });
 		await page.getByRole('checkbox', { name: 'Glas', exact: true }).check();
 		await expect(page.locator('#served-with-ice')).toHaveValue('true');
+		await page.getByLabel('Serveringstemperatur', { exact: true }).selectOption('Kylskåpskall');
 		await page.locator('#carbohydrate').fill('10');
 		await expect(page.locator('#sugar-type')).toHaveValue('sugared');
 		await page.locator('#sugar-type').selectOption('sugar-free');
@@ -180,6 +193,8 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 			volumeMl: 500,
 			container: 'Glasflaska',
 			beerPriceKr: 12.5,
+			servingTemperature: 'Kylskåpskall',
+			servedWithIce: true,
 			sodaTasting: { extras: { name: 1, packaging: 5, value: 2 } }
 		});
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -238,6 +253,16 @@ test('required data and automatic reset work in the full form', async ({ page })
 	await fillRating(page, 'extra-name', 3);
 	await fillRating(page, 'extra-packaging', 3);
 	await page.getByLabel('Läskens namn / rubrik').fill('Testläsk Zero');
+	const brand = page.getByLabel('Märke', { exact: true });
+	await brand.fill('');
+	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
+	await expect(brand).toBeFocused();
+	expect(await brand.evaluate((input: HTMLInputElement) => input.validity.valueMissing)).toBe(true);
+	await brand.fill('   ');
+	expect(await brand.evaluate((input: HTMLInputElement) => input.validity.patternMismatch)).toBe(
+		true
+	);
+	await brand.fill('Testläsk');
 	await page.locator('#review-1-price').fill('20');
 	await fillRating(page, 'extra-value', 3);
 	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
@@ -246,6 +271,14 @@ test('required data and automatic reset work in the full form', async ({ page })
 	await page.locator('#container').selectOption('');
 	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
 	await expect(page.locator('#container')).toBeFocused();
+	await page.locator('#container').selectOption('Burk');
+	const temperature = page.getByLabel('Serveringstemperatur', { exact: true });
+	const ice = page.getByLabel('Is', { exact: true });
+	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
+	await expect(temperature).toBeFocused();
+	await temperature.selectOption('Rumstempererad');
+	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
+	await expect(ice).toBeFocused();
 	await page.locator('#brand').fill('Eget');
 	await page.locator('#sugar-type').selectOption('sugared');
 	await page.getByRole('checkbox', { name: 'Originalförpackning', exact: true }).check();

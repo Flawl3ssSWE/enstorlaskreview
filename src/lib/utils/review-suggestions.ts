@@ -28,7 +28,7 @@ export function suggestBrand(
 	);
 }
 
-function fullSodaName(title: string, brand: string): string {
+export function fullSodaName(title: string, brand: string): string {
 	const name = normalize(title);
 	const prefix = normalize(brand);
 	return !prefix || name === prefix || name.startsWith(`${prefix} `) ? title : `${brand} ${title}`;

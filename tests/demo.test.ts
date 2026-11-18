@@ -77,7 +77,14 @@ test('permanent demo shares the full review layout without entering published co
 			'5/5'
 		);
 		const venue = page.getByRole('region', { name: 'Betyg på stället', exact: true });
-		await expect(venue.getByRole('listitem')).toHaveCount(5);
+		await expect(venue.getByRole('listitem')).toHaveCount(8);
+		for (const [label, score] of [
+			['Kvalitet', '4/5'],
+			['Prisvärdhet', '3/5'],
+			['Barhoppotential', '4/5']
+		]) {
+			await expect(venue.getByRole('listitem').filter({ hasText: label })).toContainText(score);
+		}
 		const service = venue.getByRole('listitem').filter({ hasText: 'Service' });
 		await expect(service).toBeVisible();
 		await expect(service).toContainText('5/5');

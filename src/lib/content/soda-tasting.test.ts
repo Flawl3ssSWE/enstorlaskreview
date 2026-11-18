@@ -94,6 +94,28 @@ it('requires V2 venue ratings to start at one', () => {
 	).toThrow('Service måste vara ett heltal mellan 1 och 5.');
 });
 
+it('keeps existing venue scores and requires all three additional scores when assessed', () => {
+	const original = { atmosphere: 3, service: 3, selection: 3, cleanliness: 3, soundLevel: 3 };
+	const extended = { ...original, quality: 1, price: 2, barhopPotential: 5 };
+	const validateVenue = (venueRatings: unknown) =>
+		validateReview({ ...tastingFixture, venueRatings }, 'exempellask.json');
+	expect(validateVenue(original).venueRatings).toEqual(original);
+	const review = validateVenue(extended);
+	expect(review.venueRatings).toEqual(extended);
+	expect(reviewScore(review)).toBe(reviewScore(validateVenue(original)));
+	expect(reviewOverview(review).metrics).toEqual(
+		expect.arrayContaining([
+			{ key: 'quality', label: 'Kvalitet', value: 1 },
+			{ key: 'price', label: 'Prisvärdhet', value: 2 },
+			{ key: 'barhopPotential', label: 'Barhoppotential', value: 5 }
+		])
+	);
+	expect(() => validateVenue({ ...original, quality: 4 })).toThrow('Prisvärdhet');
+	expect(() => validateVenue({ ...extended, quality: 0 })).toThrow(
+		'Kvalitet måste vara ett heltal mellan 1 och 5.'
+	);
+});
+
 it('rejects mixed scoring models', () => {
 	expect(() =>
 		validateReview({ ...tastingFixture, sodaRatings: sodaFixture.sodaRatings }, 'exempellask.json')

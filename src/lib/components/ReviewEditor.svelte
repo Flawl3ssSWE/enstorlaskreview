@@ -17,6 +17,7 @@
 	import NutrientInput from '$lib/components/NutrientInput.svelte';
 	import ContainerSelect from '$lib/components/ContainerSelect.svelte';
 	import AutomaticField from '$lib/components/AutomaticField.svelte';
+	import HelpTip from '$lib/components/HelpTip.svelte';
 	import RatingInputs from '$lib/components/RatingInputs.svelte';
 	import {
 		SERVING_METHODS,
@@ -27,6 +28,8 @@
 		TASTING_EXTRA_METRICS,
 		TASTING_MIN_RATING,
 		TASTING_REPURCHASE_POTENTIAL_LABELS,
+		ADDITIONAL_VENUE_RATING_KEYS,
+		LEGACY_VENUE_RATING_METRICS,
 		TASTING_VENUE_RATING_METRICS,
 		VENUE_RATING_METRICS,
 		REPURCHASE_POTENTIAL_LABELS
@@ -153,6 +156,10 @@
 	let servingMethods = $state<NonNullable<ReviewContent['servingMethods']>>([]);
 	let servingTemperature = $state<ReviewContent['servingTemperature']>();
 	let iceOverride = $state<boolean | null>();
+	const temperatureRequired = $derived(
+		!existingReview || existingReview.servingTemperature !== undefined
+	);
+	const iceRequired = $derived(!existingReview || existingReview.servedWithIce !== undefined);
 	const nutritionSource = $derived(
 		JSON.stringify([carbohydrateGPer100Ml, carbohydrateGPerContainer])
 	);
@@ -265,8 +272,17 @@
 	const previewRating = $derived(
 		previewScore === undefined ? undefined : ratingFromAverage(previewScore)
 	);
-	let venueRatings = $state<VenueRatingValues>(
-		Object.fromEntries(VENUE_RATING_METRICS.map(({ key }) => [key, 3])) as VenueRatingValues
+	const defaultVenueRatings = Object.fromEntries(
+		LEGACY_VENUE_RATING_METRICS.map(({ key }) => [key, 3])
+	) as VenueRatingValues;
+	let venueRatings = $state<Partial<VenueRatingValues>>({ ...defaultVenueRatings });
+	let includeAdditionalVenueRatings = $state(true);
+	const venueMetrics = $derived(
+		(sodaRatings ? VENUE_RATING_METRICS : TASTING_VENUE_RATING_METRICS).filter(
+			({ key }) =>
+				includeAdditionalVenueRatings ||
+				!ADDITIONAL_VENUE_RATING_KEYS.some((additional) => additional === key)
+		)
 	);
 	let image = $state<Blob>();
 	let preview = $state('');
@@ -515,9 +531,8 @@
 			favorite = false;
 			repurchasePotential = undefined;
 			rateVenue = false;
-			venueRatings = Object.fromEntries(
-				VENUE_RATING_METRICS.map(({ key }) => [key, 3])
-			) as VenueRatingValues;
+			venueRatings = { ...defaultVenueRatings };
+			includeAdditionalVenueRatings = true;
 			sodaRatings = undefined;
 			hasLegacySuitability = false;
 			tastingProfile = {};
@@ -570,9 +585,10 @@
 		tastingRatings = { ...product.sodaTasting?.ratings };
 		tastingExtras = { ...product.sodaTasting?.extras };
 		rateVenue = !!product.venueRatings;
-		venueRatings = product.venueRatings
-			? { ...product.venueRatings }
-			: (Object.fromEntries(VENUE_RATING_METRICS.map(({ key }) => [key, 3])) as VenueRatingValues);
+		venueRatings = { ...(product.venueRatings ?? defaultVenueRatings) };
+		includeAdditionalVenueRatings =
+			!product.venueRatings ||
+			ADDITIONAL_VENUE_RATING_KEYS.every((key) => product.venueRatings?.[key] !== undefined);
 		loadedSources = {
 			brand: product.beerBrand === undefined ? title : undefined,
 			container: product.container === undefined ? String(volumeMl) : undefined,
@@ -659,7 +675,7 @@
 				? { customContainer: customContainer.trim() }
 				: {}),
 			...(volumeMl !== undefined ? { volumeMl } : {}),
-			...(rateVenue ? { venueRatings: { ...venueRatings } } : {}),
+			...(rateVenue ? { venueRatings: { ...venueRatings } as VenueRatingValues } : {}),
 			...(existingReview?.coAuthors ? { coAuthors: existingReview.coAuthors } : {}),
 			...(typeof energyOverride === 'boolean' || isEnergyDrink ? { isEnergyDrink } : {}),
 			...(typeof proteinOverride === 'boolean' || isProteinDrink ? { isProteinDrink } : {}),
@@ -1110,25 +1126,19 @@
 				<section class={sectionClass} data-step="2" hidden={wizard && step !== 2}>
 					<h2 tabindex="-1" class="scroll-mt-32 text-xl font-semibold">Data</h2>
 					<p id="automatic-field-help" class="sr-only">Automatiskt förslag. Du kan ändra värdet.</p>
-					<label class="block" for="title"
-						>Läskens namn / rubrik<input
-							id="title"
-							required
-							maxlength="200"
-							bind:value={title}
-							class={inputClass}
-							placeholder="Till exempel Hallonsoda"
-						/></label
+					<div
+						class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end sm:gap-x-3"
 					>
-					<div class="grid gap-5 sm:grid-cols-2">
 						<AutomaticField
 							active={isAutomatic('brand', brandOverride, title) && !!brand}
 							field="Märke"
 							kind="input"
 						>
 							<label for="brand"
-								>Märke (valfritt)<input
+								>Märke<input
 									id="brand"
+									required={!existingReview || !!existingReview.beerBrand}
+									pattern=".*\S.*"
 									data-automatic={isAutomatic('brand', brandOverride, title) && !!brand}
 									aria-describedby={isAutomatic('brand', brandOverride, title) && !!brand
 										? 'automatic-field-help'
@@ -1144,6 +1154,30 @@
 								/></label
 							>
 						</AutomaticField>
+						<span
+							aria-hidden="true"
+							class="grid size-6 place-items-center justify-self-center rounded-full bg-accent-soft font-semibold leading-none text-accent sm:mb-2"
+							>+</span
+						>
+						<div>
+							<div class="flex items-center gap-1">
+								<label for="title">Läskens namn / rubrik</label>
+								<HelpTip
+									label="Läskens namn"
+									id="soda-name-help"
+									text="På kortet visas märke och namn tillsammans. De används även för att länka recensioner av samma läsk."
+								/>
+							</div>
+							<input
+								id="title"
+								required
+								aria-describedby="soda-name-help"
+								maxlength="200"
+								bind:value={title}
+								class={inputClass}
+								placeholder="Till exempel Hallonsoda"
+							/>
+						</div>
 					</div>
 					<label class="block" for="author"
 						>Författare<input
@@ -1208,47 +1242,54 @@
 						</div>
 					</fieldset>
 					<div class="grid gap-5 sm:grid-cols-2">
-						<label for="serving-temperature"
-							>Serveringstemperatur (valfritt)
-							<select id="serving-temperature" bind:value={servingTemperature} class={inputClass}>
-								<option value={undefined}>Ej angiven</option>
+						<div>
+							<label for="serving-temperature">Serveringstemperatur</label>
+							<select
+								id="serving-temperature"
+								required={temperatureRequired}
+								bind:value={
+									() => servingTemperature ?? '',
+									(value) => (servingTemperature = value || undefined)
+								}
+								class={inputClass}
+							>
+								<option value="">{temperatureRequired ? 'Välj temperatur' : 'Ej angiven'}</option>
 								{#each SERVING_TEMPERATURES as temperature}<option value={temperature}
 										>{temperature}</option
 									>{/each}
 							</select>
-						</label>
+						</div>
 						<AutomaticField
 							active={isAutomatic('ice', iceOverride, servingSource) && servedWithIce !== undefined}
 							field="Is"
 							kind="select"
 						>
-							<label for="served-with-ice"
-								>Is (valfritt)
-								<select
-									id="served-with-ice"
-									data-automatic={isAutomatic('ice', iceOverride, servingSource) &&
-										servedWithIce !== undefined}
-									aria-describedby={isAutomatic('ice', iceOverride, servingSource) &&
-									servedWithIce !== undefined
-										? 'automatic-field-help'
-										: undefined}
-									value={servedWithIce}
-									onchange={(event) => {
-										iceOverride =
-											event.currentTarget.value === 'true'
-												? true
-												: event.currentTarget.value === 'false'
-													? false
-													: null;
-										loadedSources.ice = undefined;
-									}}
-									class={inputClass}
-								>
-									<option value={undefined}>Ej angivet</option>
-									<option value={true}>Med is</option>
-									<option value={false}>Utan is</option>
-								</select>
-							</label>
+							<label for="served-with-ice">Is</label>
+							<select
+								id="served-with-ice"
+								required={iceRequired}
+								data-automatic={isAutomatic('ice', iceOverride, servingSource) &&
+									servedWithIce !== undefined}
+								aria-describedby={isAutomatic('ice', iceOverride, servingSource) &&
+								servedWithIce !== undefined
+									? 'automatic-field-help'
+									: undefined}
+								value={servedWithIce ?? ''}
+								onchange={(event) => {
+									iceOverride =
+										event.currentTarget.value === 'true'
+											? true
+											: event.currentTarget.value === 'false'
+												? false
+												: null;
+									loadedSources.ice = undefined;
+								}}
+								class={inputClass}
+							>
+								<option value="">{iceRequired ? 'Välj med eller utan is' : 'Ej angivet'}</option>
+								<option value={true}>Med is</option>
+								<option value={false}>Utan is</option>
+							</select>
 						</AutomaticField>
 					</div>
 					{#key nutritionVersion}
@@ -1377,12 +1418,22 @@
 						<p class="text-sm text-muted">
 							Platsbetygen visas separat och påverkar inte läskens helhetsbetyg.
 						</p>
-						{#if rateVenue}<RatingInputs
-								metrics={sodaRatings ? VENUE_RATING_METRICS : TASTING_VENUE_RATING_METRICS}
+						{#if rateVenue}
+							<RatingInputs
+								metrics={venueMetrics}
 								minimum={minimumRating}
 								bind:values={venueRatings}
 								prefix="venue"
-							/>{/if}
+							/>
+							{#if !includeAdditionalVenueRatings}
+								<button
+									type="button"
+									class="btn btn-secondary"
+									onclick={() => (includeAdditionalVenueRatings = true)}
+									>Lägg till kvalitet, prisvärdhet och barhoppotential</button
+								>
+							{/if}
+						{/if}
 						<details>
 							<summary class="cursor-pointer text-secondary"
 								>Koordinater för kartan (valfritt)</summary

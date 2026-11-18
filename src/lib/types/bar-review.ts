@@ -1,4 +1,5 @@
 import type {
+	ADDITIONAL_VENUE_RATING_KEYS,
 	DRINK_CONTAINERS,
 	SERVING_METHODS,
 	SERVING_TEMPERATURES,
@@ -37,8 +38,9 @@ export interface SodaTasting {
 	ratings: Record<(typeof TASTING_RATING_METRICS)[number]['key'], number>;
 	extras: Record<(typeof TASTING_EXTRA_METRICS)[number]['key'], number>;
 }
-export type VenueRatingKey = 'atmosphere' | 'service' | 'selection' | 'cleanliness' | 'soundLevel';
-export type VenueRatingValues = Record<VenueRatingKey, number>;
+type AdditionalVenueRatingKey = (typeof ADDITIONAL_VENUE_RATING_KEYS)[number];
+export type VenueRatingValues = Record<Exclude<ReviewRatingKey, AdditionalVenueRatingKey>, number> &
+	Partial<Record<AdditionalVenueRatingKey, number>>;
 
 export interface DrinkFacts {
 	servingMethods?: (typeof SERVING_METHODS)[number][];

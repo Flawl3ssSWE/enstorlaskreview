@@ -23,8 +23,11 @@
 		"atmosphere": 4,
 		"service": 5,
 		"selection": 4,
+		"quality": 4,
+		"price": 3,
 		"cleanliness": 5,
-		"soundLevel": 3
+		"soundLevel": 3,
+		"barhopPotential": 4
 	},
 	"container": "Annan",
 	"customContainer": "Återanvändbar provsmakningsflaska",
