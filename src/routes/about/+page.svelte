@@ -2,6 +2,7 @@
 	import RatingMug from '$lib/components/RatingMug.svelte';
 	import { base } from '$app/paths';
 	import {
+		OVERALL_RATING_LEVELS,
 		TASTING_REPURCHASE_POTENTIAL_LABELS,
 		TASTING_MIN_RATING,
 		TASTING_RATING_METRICS
@@ -47,14 +48,9 @@
 					Namn, förpackning, prisvärdhet och återköpspotential visas separat i den nya modellen.
 				</p>
 				<ul class="mt-3 space-y-2 text-secondary">
-					<li class="flex items-center gap-3"><RatingMug rating={0} /> Inget extra.</li>
-					<li class="flex items-center gap-3">
-						<RatingMug rating={1} /> Sticker ut lite från mängden.
-					</li>
-					<li class="flex items-center gap-3"><RatingMug rating={2} /> Riktigt bra.</li>
-					<li class="flex items-center gap-3">
-						<RatingMug rating={3} /> Måste provas. Väldigt sällsynt.
-					</li>
+					{#each OVERALL_RATING_LEVELS as { rating, label } (rating)}
+						<li class="flex items-center gap-3"><RatingMug {rating} /> {label}</li>
+					{/each}
 				</ul>
 			</section>
 

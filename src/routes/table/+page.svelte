@@ -162,6 +162,7 @@
 			{#each OVERALL_RATING_LEVELS as level, index (level.rating)}
 				<div class="rounded-xl border border-line p-3" data-rating-band={level.rating}>
 					<RatingMug rating={level.rating} />
+					<p class="mt-2 font-semibold text-ink">{level.label}</p>
 					<p class="mt-2 text-sm text-secondary">
 						{number(level.minimum)} till {#if OVERALL_RATING_LEVELS[index + 1]}under {number(
 								OVERALL_RATING_LEVELS[index + 1].minimum

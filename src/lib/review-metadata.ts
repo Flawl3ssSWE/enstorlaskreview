@@ -236,8 +236,8 @@ export const SERVING_TEMPERATURES = ['Kylskåpskall', 'Rumstempererad', 'Varm'] 
 
 /** Lower bounds for the published 0–3 rating, shared with the review overview. */
 export const OVERALL_RATING_LEVELS = [
-	{ rating: 0, minimum: 0 },
-	{ rating: 1, minimum: 2.5 },
-	{ rating: 2, minimum: 3.5 },
-	{ rating: 3, minimum: 4.5 }
+	{ rating: 0, minimum: 0, label: 'Meh, det här var inget vidare.' },
+	{ rating: 1, minimum: 2.5, label: 'Jodå, det här går ju att dricka.' },
+	{ rating: 2, minimum: 3.5, label: 'Smaskens! Nu börjar det likna nåt.' },
+	{ rating: 3, minimum: 4.5, label: 'Wow, ge mig en till!' }
 ] as const;
