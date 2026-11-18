@@ -315,24 +315,22 @@
 				{@const extras = bar.sodaTasting.extras}
 				<section class="space-y-3" aria-labelledby="extras-heading">
 					<h2 id="extras-heading" class="text-base font-semibold text-ink">Övriga betyg</h2>
-					<ul class="grid gap-2 sm:grid-cols-3 sm:gap-3">
+					<ul class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-2">
 						{#each TASTING_EXTRA_METRICS as metric (metric.key)}
 							{@const Icon = extraIcons[metric.key]}
 							<li
-								class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-xl border border-line bg-surface-raised/50 px-3 py-2 sm:grid-cols-[1fr_auto] sm:px-4 sm:py-3"
+								class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-line bg-surface-raised/50 px-3 py-1.5"
 							>
 								<span
-									class="grid size-8 place-items-center rounded-full bg-accent-soft text-accent sm:col-start-1 sm:row-start-1"
+									class="grid size-8 place-items-center rounded-full bg-accent-soft text-accent"
 									aria-hidden="true"
 								>
 									<Icon size={17} strokeWidth={1.75} />
 								</span>
-								<div class="min-w-0 text-sm sm:col-span-2 sm:row-start-2">
+								<div class="min-w-0 text-sm">
 									{@render ratingLabel(metric)}
 								</div>
-								<span class="sm:col-start-2 sm:row-start-1">
-									{@render ratingValue(extras[metric.key])}
-								</span>
+								{@render ratingValue(extras[metric.key])}
 							</li>
 						{/each}
 					</ul>
