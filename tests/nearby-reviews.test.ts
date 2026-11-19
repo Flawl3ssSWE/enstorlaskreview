@@ -65,7 +65,9 @@ test('denied location keeps soda reviews readable and uses latest ordering', asy
 	await page.goto('./?sort=nearest');
 	await page.getByRole('button', { name: 'Visa avstånd från min position' }).click();
 	await expect(page.getByRole('status')).toContainText('Platsåtkomst nekades');
-	await expect(page.getByRole('heading', { name: 'Hallonsoda', exact: true })).toBeVisible();
+	await expect(
+		page.getByRole('heading', { name: 'Testläsk Hallonsoda', exact: true })
+	).toBeVisible();
 	await expect(page.getByTestId('review-distance')).toHaveCount(0);
 	const titles = await page.locator('h2').allTextContents();
 	await page.getByRole('combobox', { name: 'Sortera', exact: true }).selectOption('latest');

@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { suggestBrand, suggestContainer, suggestIce, suggestionValue } from './review-suggestions';
+import {
+	fullSodaName,
+	suggestBrand,
+	suggestContainer,
+	suggestIce,
+	suggestSodaId,
+	suggestionValue
+} from './review-suggestions';
+
+it('combines brand and name without repeating a brand already in the name', () => {
+	expect(fullSodaName('Zero', 'Coca Cola')).toBe('Coca Cola Zero');
+	expect(fullSodaName('Coca-Cola Zero', 'Coca Cola')).toBe('Coca-Cola Zero');
+	expect(fullSodaName('Hallonsoda', '')).toBe('Hallonsoda');
+});
 
 describe('editor suggestions', () => {
 	it('matches normalized brand prefixes, preferring the longest', () => {
@@ -9,7 +22,29 @@ describe('editor suggestions', () => {
 		);
 		expect(suggestBrand('Fantastisk', ['Fanta'])).toBe('');
 		expect(suggestBrand('Unknown', ['Fanta'])).toBe('');
-		expect(suggestBrand('Special', [], [{ title: 'Special', brand: 'Fanta' }])).toBe('Fanta');
+		expect(suggestBrand('Special', [], [{ title: 'Special', beerBrand: 'Fanta' }])).toBe('Fanta');
+	});
+	it('reuses a saved soda ID for the same brand and name', () => {
+		const reviews = [{ title: 'Rockstar Guava Zero', beerBrand: 'Rockstar', sodaId: 'rockstar' }];
+		expect(suggestSodaId('Guava Zero', 'Rockstar', reviews)).toBe('rockstar');
+		expect(suggestSodaId('  Róckstar Guava–Zero ', 'ROCKSTAR', reviews)).toBe('rockstar');
+		expect(suggestSodaId('Guava Zero', 'Monster', reviews)).toBe('monster-guava-zero');
+		expect(suggestSodaId('Rockstar', 'Rockstar', reviews)).toBe('rockstar-2');
+	});
+	it('links a legacy soda with a missing brand and the same full name', () => {
+		expect(
+			suggestSodaId('Guava Zero', 'Rockstar', [
+				{ title: 'Rockstar Guava Zero', sodaId: 'rockstar' }
+			])
+		).toBe('rockstar');
+	});
+	it('leaves conflicting matches unlinked', () => {
+		expect(
+			suggestSodaId('Guava Zero', 'Rockstar', [
+				{ title: 'Rockstar Guava Zero', beerBrand: 'Rockstar', sodaId: 'first' },
+				{ title: 'Rockstar Guava Zero', beerBrand: 'Rockstar', sodaId: 'second' }
+			])
+		).toBeUndefined();
 	});
 	it.each([250, 330, 355, 500])('suggests a can for %i ml', (volume) => {
 		expect(suggestContainer(volume)).toBe('Burk');

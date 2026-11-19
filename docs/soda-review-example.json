@@ -10,15 +10,10 @@
 	"description": "Frisk och balanserad enligt Alex.",
 	"favorite": true,
 	"repurchasePotential": 5,
-	"sodaRatings": {
-		"taste": 5,
-		"sweetness": 3,
-		"carbonation": 5,
-		"mouthfeel": 5,
-		"mouthfeelMatch": 5,
-		"drinkability": 5,
-		"matchesName": 5,
-		"value": 5
+	"sodaTasting": {
+		"profile": { "sweetness": 2, "acidity": 5, "carbonation": 4, "body": 2, "bitterness": 2 },
+		"ratings": { "taste": 4, "balance": 5, "aftertaste": 4, "mouthfeel": 4 },
+		"extras": { "name": 4, "packaging": 5, "value": 4 }
 	},
 	"volumeMl": 330,
 	"sodaId": "exempellask"

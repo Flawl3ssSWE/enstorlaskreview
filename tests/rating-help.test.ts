@@ -42,10 +42,13 @@ test('generator keeps labelled inputs and their rating descriptions', async ({ p
 	await page.getByText('Stället (valfritt)', { exact: true }).click();
 	await page.getByText('Avancerade inställningar', { exact: true }).click();
 	const sweetness = page.getByRole('spinbutton', { name: 'Sötma', exact: true });
-	await expect(sweetness).toHaveAccessibleDescription(/0 = inte söt, 3 = perfekt, 5 = för söt/);
-	await expect(page.locator('#soda-sweetness-help')).toBeVisible();
-	await expect(page.locator('#soda-mouthfeel-help')).toBeVisible();
+	await expect(sweetness).toHaveAccessibleDescription(
+		/1 = ingen märkbar sötma, 3 = tydligt söt, 5 = mycket söt/
+	);
+	await expect(page.locator('#profile-sweetness-help')).toBeVisible();
+	await expect(page.locator('#tasting-mouthfeel-help')).toBeVisible();
 	await expect(sweetness).toHaveAttribute('step', '1');
+	await expect(sweetness).toHaveAttribute('min', '1');
 	await sweetness.fill('4.5');
 	expect(
 		await sweetness.evaluate((input) => (input as HTMLInputElement).validity.stepMismatch)

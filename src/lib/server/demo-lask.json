@@ -14,22 +14,20 @@
 	"description": "## En påhittad läsk för att testa designen\n\nDet här är en **demonstration**, inte en riktig recension. Bilden är lånad från en befintlig recension. Alla värden är påhittade för att visa hur sidan fungerar med fullständig drycksfakta.\n\nFrisk citrus, söta bär och tydlig kolsyra. En längre text hjälper till att jämföra faktarutan med recensionen, både på mobilen och på en större skärm.\n\n- Alla tre dryckskategorier är aktiverade.\n- Näringsvärden visas både per 100 ml och för hela förpackningen.\n- Läskbetyg och betyg för det fiktiva provsmakningsstället är ifyllda.",
 	"favorite": true,
 	"repurchasePotential": 4,
-	"sodaRatings": {
-		"taste": 5,
-		"sweetness": 3,
-		"carbonation": 4,
-		"mouthfeel": 4,
-		"mouthfeelMatch": 4,
-		"drinkability": 5,
-		"matchesName": 4,
-		"value": 4
+	"sodaTasting": {
+		"profile": { "sweetness": 3, "acidity": 4, "carbonation": 4, "body": 2, "bitterness": 1 },
+		"ratings": { "taste": 4, "balance": 5, "aftertaste": 4, "mouthfeel": 4 },
+		"extras": { "name": 4, "packaging": 5, "value": 4 }
 	},
 	"venueRatings": {
 		"atmosphere": 4,
 		"service": 5,
 		"selection": 4,
+		"quality": 4,
+		"price": 3,
 		"cleanliness": 5,
-		"soundLevel": 3
+		"soundLevel": 3,
+		"barhopPotential": 4
 	},
 	"container": "Annan",
 	"customContainer": "Återanvändbar provsmakningsflaska",

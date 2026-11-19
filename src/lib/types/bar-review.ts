@@ -1,4 +1,12 @@
-import type { DRINK_CONTAINERS, SERVING_METHODS, SERVING_TEMPERATURES } from '../review-metadata';
+import type {
+	ADDITIONAL_VENUE_RATING_KEYS,
+	DRINK_CONTAINERS,
+	SERVING_METHODS,
+	SERVING_TEMPERATURES,
+	TASTING_EXTRA_METRICS,
+	TASTING_PROFILE_METRICS,
+	TASTING_RATING_METRICS
+} from '../review-metadata';
 
 export type DrinkContainer = (typeof DRINK_CONTAINERS)[number];
 
@@ -24,8 +32,15 @@ export type SodaRatingKey =
 	| 'matchesName'
 	| 'value';
 export type SodaRatingValues = Record<SodaRatingKey, number> & { mouthfeelMatch?: number };
-export type VenueRatingKey = 'atmosphere' | 'service' | 'selection' | 'cleanliness' | 'soundLevel';
-export type VenueRatingValues = Record<VenueRatingKey, number>;
+
+export interface SodaTasting {
+	profile: Record<(typeof TASTING_PROFILE_METRICS)[number]['key'], number>;
+	ratings: Record<(typeof TASTING_RATING_METRICS)[number]['key'], number>;
+	extras: Record<(typeof TASTING_EXTRA_METRICS)[number]['key'], number>;
+}
+type AdditionalVenueRatingKey = (typeof ADDITIONAL_VENUE_RATING_KEYS)[number];
+export type VenueRatingValues = Record<Exclude<ReviewRatingKey, AdditionalVenueRatingKey>, number> &
+	Partial<Record<AdditionalVenueRatingKey, number>>;
 
 export interface DrinkFacts {
 	servingMethods?: (typeof SERVING_METHODS)[number][];
@@ -55,6 +70,7 @@ export interface ReviewContent extends Partial<ReviewRatingValues>, DrinkFacts {
 	favorite?: boolean;
 	repurchasePotential?: number;
 	sodaRatings?: SodaRatingValues;
+	sodaTasting?: SodaTasting;
 	venueRatings?: VenueRatingValues;
 	title: string;
 	description: string;

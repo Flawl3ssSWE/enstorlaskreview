@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { reviewerKey, reviewScore, selectReviewer, favoriteLabel } from '$lib/content/soda';
+	import {
+		reviewerKey,
+		reviewScore,
+		selectReviewer,
+		favoriteLabel,
+		isSodaReview
+	} from '$lib/content/soda';
+	import { fullSodaName } from '$lib/utils/review-suggestions';
 	import { capitalizeAuthorName } from '$lib/utils/authors';
 	import { onMount, onDestroy } from 'svelte';
 	import { watchUserLocation } from '$lib/client/user-location';
@@ -98,6 +105,8 @@
 	});
 
 	const normalize = (value: string) => value.toLowerCase();
+	const cardTitle = (review: PublicReview) =>
+		isSodaReview(review) ? fullSodaName(review.title, review.beerBrand ?? '') : review.title;
 	const normalizeSort = (value: string | null | undefined): ReviewSort => {
 		if (value === 'oldest' || value === 'score' || value === 'nearest') return value;
 		return 'latest';
@@ -161,7 +170,7 @@
 			? bars
 			: bars.filter((bar) => {
 					const haystack = [
-						bar.title,
+						cardTitle(bar),
 						bar.location,
 						bar.description,
 						bar.beerBrand,
@@ -426,7 +435,7 @@
 					imagePriority={index === 0}
 					drink={bar}
 					distanceKm={distanceKm(userLocation.position, bar)}
-					title={bar.title}
+					title={cardTitle(bar)}
 					description={bar.description}
 					rating={bar.rating}
 					favorite={favoriteLabel(bar)}

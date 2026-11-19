@@ -1,13 +1,14 @@
+import { isSodaReview } from './soda';
 import type { PublicReview } from '../types/bar-review.ts';
 
 /** Only explicitly linked soda reviews belong together; titles are not identifiers. */
 export function relatedSodaReviews(review: PublicReview, reviews: PublicReview[]): PublicReview[] {
-	if (!review.sodaId || !review.sodaRatings) return [];
+	if (!review.sodaId || !isSodaReview(review)) return [];
 	return reviews
 		.filter(
 			(candidate) =>
 				candidate.slug !== review.slug &&
-				candidate.sodaRatings &&
+				isSodaReview(candidate) &&
 				candidate.sodaId === review.sodaId
 		)
 		.sort(

@@ -2,11 +2,55 @@ import { expect, test } from '@playwright/test';
 
 const basePath = process.env.BASE_PATH ?? '';
 
+test('a test soda follows V2 calibration and stays outside the published reviews', async ({
+	page
+}) => {
+	await page.setViewportSize({ width: 320, height: 812 });
+	await page.goto('table/');
+	const reviews = page.getByRole('table');
+	const originalReviews = await reviews.innerText();
+	const thresholds = page.getByRole('region', { name: 'Gränser för helhetsbetyg' });
+	const originalThresholds = await thresholds.innerText();
+	await page.getByText('Testa en egen läsk', { exact: true }).click();
+	const result = page.getByRole('status', { name: 'Testläskens resultat' });
+	const balance = page.getByRole('combobox', { name: 'Balans', exact: true });
+	const mouthfeel = page.getByRole('combobox', { name: 'Munkänsla', exact: true });
+	await balance.selectOption('1');
+	await expect(result).toContainText('2,5/5 poäng');
+	await expect(
+		result.getByRole('img', { name: 'Helhetsbetyg med standardvikter 1 av 3' })
+	).toBeVisible();
+	await mouthfeel.selectOption('2');
+	await expect(result).toContainText('2,35/5 poäng');
+	await expect(
+		result.getByRole('img', { name: 'Helhetsbetyg med standardvikter 0 av 3' })
+	).toBeVisible();
+	await page.getByText('Kalibrera poängen', { exact: true }).click();
+	await page.getByRole('slider', { name: /^Smak/ }).fill('100');
+	await expect(result).toContainText('2,594/5 poäng');
+	await expect(
+		result.getByRole('img', { name: 'Helhetsbetyg med dina v2-vikter 1 av 3' })
+	).toBeVisible();
+	await expect(
+		result.getByRole('img', { name: 'Helhetsbetyg med standardvikter 0 av 3' })
+	).toBeVisible();
+	for (const slider of await page.getByRole('slider').all()) await slider.fill('0');
+	await expect(result.getByText('2,35/5 poäng', { exact: true })).toHaveCount(2);
+	await page.getByRole('slider', { name: /^Smak/ }).fill('100');
+	await expect(result).toContainText('3/5 poäng');
+	await page.getByRole('button', { name: 'Återställ standardvikter' }).click();
+	await expect(result.getByText('2,35/5 poäng', { exact: true })).toHaveCount(2);
+	expect(await reviews.innerText()).toBe(originalReviews);
+	expect(await thresholds.innerText()).toBe(originalThresholds);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test('calibration sliders update scores, ratings, counts and sorting and can be reset', async ({
 	page
 }) => {
 	await page.goto('table/');
 	await page.getByText('Kalibrera poängen', { exact: true }).click();
+	await page.getByLabel('Betygsmodell att kalibrera').selectOption('weighted');
 	const soda = page.locator('tr[data-review="testsoda"]');
 	const legacy = page.locator('tr[data-review="hallonsoda"]');
 	const originalLegacy = await legacy.innerText();
@@ -36,7 +80,42 @@ test('calibration sliders update scores, ratings, counts and sorting and can be 
 	await expect(thresholds.locator('[data-rating-band="2"]')).toContainText('1 läskrecension');
 	await page.reload();
 	await page.getByText('Kalibrera poängen', { exact: true }).click();
+	await page.getByLabel('Betygsmodell att kalibrera').selectOption('weighted');
 	await expect(sweetness).toHaveValue('15');
+});
+
+test('V2 is the default calibration and the example stays outside published results', async ({
+	page
+}) => {
+	await page.goto('table/');
+	const formula = page.getByRole('heading', { name: 'Så räknas läskmodell V2' });
+	await expect(formula).toBeHidden();
+	await page.getByText('Så räknas poängen', { exact: true }).click();
+	await expect(formula).toBeVisible();
+	await expect(
+		page.getByText('Smak × 40 % + Balans × 25 % + Eftersmak × 20 % + Munkänsla × 15 %', {
+			exact: true
+		})
+	).toBeVisible();
+	await page.getByText('Kalibrera poängen', { exact: true }).click();
+	const model = page.getByLabel('Betygsmodell att kalibrera');
+	await expect(model).toHaveValue('v2');
+	const example = page.getByRole('region', { name: 'Räkneexempel' });
+	await expect(example.getByText('4,25/5 · 2/3 muggar', { exact: true })).toHaveCount(2);
+	const table = page.getByRole('table');
+	const before = await table.innerText();
+	await expect(page.getByRole('slider')).toHaveCount(4);
+	const balance = page.getByRole('slider', { name: /^Balans/ });
+	await expect(balance).toHaveValue('25');
+	await balance.fill('100');
+	await expect(example).toContainText('4,571/5 · 3/3 muggar');
+	expect(await table.innerText()).toBe(before);
+	await model.selectOption('weighted');
+	await expect(example).toHaveCount(0);
+	await model.selectOption('v2');
+	await expect(balance).toHaveValue('100');
+	await page.getByRole('button', { name: 'Återställ standardvikter' }).click();
+	await expect(example.getByText('4,25/5 · 2/3 muggar', { exact: true })).toHaveCount(2);
 });
 
 test('overview renders all published reviews and shared thresholds without JavaScript', async ({

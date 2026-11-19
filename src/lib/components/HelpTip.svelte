@@ -7,15 +7,21 @@
 		label,
 		text,
 		id = generatedId,
+		appearance = 'help',
 		children
 	}: {
 		label: string;
 		text: string;
 		id?: string;
+		appearance?: 'help' | 'badge';
 		children?: Snippet;
 	} = $props();
 	let trigger: HTMLButtonElement;
-	let panel: HTMLDivElement;
+	let panel: HTMLSpanElement;
+	const triggerStyles = {
+		help: 'size-7 text-muted hover:text-accent',
+		badge: 'size-6 cursor-help bg-current/10 hover:bg-current/20'
+	};
 	let open = $state(false);
 	let closeTimer: ReturnType<typeof setTimeout>;
 	onDestroy(() => clearTimeout(closeTimer));
@@ -56,11 +62,13 @@
 	onfocus={show}
 	onblur={hide}
 	onclick={show}
-	class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+	class="inline-flex shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent {triggerStyles[
+		appearance
+	]}"
 >
 	{#if children}{@render children()}{:else}<CircleHelp size={16} aria-hidden="true" />{/if}
 </button>
-<div
+<span
 	bind:this={panel}
 	{id}
 	popover="auto"
@@ -71,4 +79,4 @@
 	class="fixed m-0 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-surface-raised p-3 text-left text-sm font-normal normal-case leading-relaxed tracking-normal text-secondary shadow-xl"
 >
 	{text}
-</div>
+</span>

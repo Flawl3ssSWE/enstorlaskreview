@@ -1,13 +1,18 @@
 import { stripControlCharacters } from '../utils/review-text.ts';
 import {
+	ADDITIONAL_VENUE_RATING_KEYS,
 	DRINK_CONTAINERS,
 	SERVING_METHODS,
 	SERVING_TEMPERATURES,
 	REVIEW_RATING_METRICS,
 	SODA_RATING_METRICS,
+	TASTING_EXTRA_METRICS,
+	TASTING_MIN_RATING,
+	TASTING_PROFILE_METRICS,
+	TASTING_RATING_METRICS,
 	VENUE_RATING_METRICS
 } from '../review-metadata.ts';
-import { sodaScore } from './soda.ts';
+import { sodaReviewScore } from './soda.ts';
 import { calculateOverallRating, ratingFromAverage } from '../utils/ratings.ts';
 import { isValidBeerPriceKr } from '../utils/price.ts';
 import type { PublicReview, ReviewContent } from '../types/bar-review.ts';
@@ -50,6 +55,7 @@ const fields = new Set([
 	'favorite',
 	'repurchasePotential',
 	'sodaRatings',
+	'sodaTasting',
 	'venueRatings',
 	'title',
 	'description',
@@ -91,6 +97,8 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 	if (!value || typeof value !== 'object' || Array.isArray(value))
 		fail('Recensionen måste vara ett JSON-objekt.');
 	const data = value as Record<string, unknown>;
+	const minimumRating = data.sodaTasting === undefined ? 0 : TASTING_MIN_RATING;
+	const isSoda = data.sodaTasting !== undefined || data.sodaRatings !== undefined;
 	for (const key of Object.keys(data)) {
 		if (!fields.has(key))
 			fail(`Okänt fält: ${key}. Utkast och privata uppgifter får inte publiceras.`);
@@ -109,12 +117,12 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 		text('sodaId', 100);
 		if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.sodaId as string))
 			fail('Läsk-ID måste bestå av små bokstäver a–z, siffror och bindestreck.');
-		if (data.sodaRatings === undefined) fail('Läsk-ID kräver läskbetyg.');
+		if (!isSoda) fail('Läsk-ID kräver läskbetyg.');
 	}
 	text('title', 200);
 	text('description', 50000);
 	text('author', 100);
-	text('location', 300, data.sodaRatings === undefined ? 1 : 0);
+	text('location', 300, isSoda ? 0 : 1);
 	text('slug', 160);
 	text('image', 200);
 	if (!isSafeSlug(data.slug as string) || filename !== `${data.slug}.json`)
@@ -183,21 +191,33 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 	)
 		fail('Ange koffeinhalten för energidrycken.');
 	if (data.beerBrand !== undefined) text('beerBrand', 100);
-	const validateRatings = (value: unknown, metrics: readonly { key: string }[], label: string) => {
+	const validateObject = (value: unknown, keys: readonly string[], label: string) => {
 		if (!value || typeof value !== 'object' || Array.isArray(value))
 			fail(`${label} måste vara ett objekt.`);
-		const ratings = value as Record<string, unknown>;
-		if (Object.keys(ratings).some((key) => !metrics.some((metric) => metric.key === key)))
-			fail(`Okänt betyg i ${label}.`);
-		for (const { key } of metrics) {
-			if (key === 'mouthfeelMatch' && ratings[key] === undefined) continue;
+		const object = value as Record<string, unknown>;
+		if (Object.keys(object).some((key) => !keys.includes(key))) fail(`Okänt fält i ${label}.`);
+		return object;
+	};
+	const validateRatings = (
+		value: unknown,
+		metrics: readonly { key: string; label: string }[],
+		label: string,
+		{ optional = [], minimum = 0 }: { optional?: readonly string[]; minimum?: number } = {}
+	) => {
+		const ratings = validateObject(
+			value,
+			metrics.map(({ key }) => key),
+			label
+		);
+		for (const { key, label: metricLabel } of metrics) {
+			if (optional.includes(key) && ratings[key] === undefined) continue;
 			if (
 				typeof ratings[key] !== 'number' ||
 				!Number.isInteger(ratings[key]) ||
-				(ratings[key] as number) < 0 ||
+				(ratings[key] as number) < minimum ||
 				(ratings[key] as number) > 5
 			)
-				fail(`${label}: ${key} måste vara ett heltal mellan 0 och 5.`);
+				fail(`${label}: ${metricLabel} måste vara ett heltal mellan ${minimum} och 5.`);
 		}
 	};
 	if (data.recommended !== undefined && typeof data.recommended !== 'boolean')
@@ -208,21 +228,47 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 		data.repurchasePotential !== undefined &&
 		(typeof data.repurchasePotential !== 'number' ||
 			!Number.isInteger(data.repurchasePotential) ||
-			data.repurchasePotential < 0 ||
+			data.repurchasePotential < minimumRating ||
 			data.repurchasePotential > 5)
 	)
-		fail('Återköpspotential måste vara ett heltal mellan 0 och 5.');
-	if (
-		data.sodaRatings === undefined &&
-		(data.favorite !== undefined || data.repurchasePotential !== undefined)
-	)
+		fail(`Återköpspotential måste vara ett heltal mellan ${minimumRating} och 5.`);
+	if (!isSoda && (data.favorite !== undefined || data.repurchasePotential !== undefined))
 		fail('Läskfavorit och återköpspotential kräver läskbetyg.');
-	if (data.sodaRatings !== undefined) {
-		validateRatings(data.sodaRatings, SODA_RATING_METRICS, 'Läskbetyg');
+	if (isSoda) {
+		if (data.sodaTasting !== undefined) {
+			if (data.sodaRatings !== undefined) fail('Använd en läskbetygsmodell per recension.');
+			const tasting = validateObject(
+				data.sodaTasting,
+				['profile', 'ratings', 'extras'],
+				'Läskbetyg v2'
+			);
+			const range = { minimum: minimumRating };
+			validateRatings(tasting.profile, TASTING_PROFILE_METRICS, 'Smakprofil', range);
+			validateRatings(tasting.ratings, TASTING_RATING_METRICS, 'Delbetyg', range);
+			validateRatings(tasting.extras, TASTING_EXTRA_METRICS, 'Övriga betyg', range);
+			if (data.repurchasePotential === undefined)
+				fail(`Ange återköpspotential från ${minimumRating} till 5.`);
+		} else {
+			validateRatings(data.sodaRatings, SODA_RATING_METRICS, 'Läskbetyg', {
+				optional: ['mouthfeelMatch']
+			});
+		}
 		if (REVIEW_RATING_METRICS.some(({ key }) => data[key] !== undefined))
 			fail('Blanda inte läskbetyg med äldre barbetyg.');
-		if (data.venueRatings !== undefined)
-			validateRatings(data.venueRatings, VENUE_RATING_METRICS, 'Platsbetyg');
+		if (data.venueRatings !== undefined) {
+			const venueRatings = validateObject(
+				data.venueRatings,
+				VENUE_RATING_METRICS.map(({ key }) => key),
+				'Platsbetyg'
+			);
+			const hasAdditionalRatings = ADDITIONAL_VENUE_RATING_KEYS.some(
+				(key) => venueRatings[key] !== undefined
+			);
+			validateRatings(venueRatings, VENUE_RATING_METRICS, 'Platsbetyg', {
+				minimum: minimumRating,
+				optional: hasAdditionalRatings ? [] : ADDITIONAL_VENUE_RATING_KEYS
+			});
+		}
 	} else {
 		if (data.venueRatings !== undefined) fail('Platsbetyg kräver läskbetyg.');
 		for (const { key } of REVIEW_RATING_METRICS) {
@@ -295,12 +341,14 @@ export function validateReview(value: unknown, filename: string): PublicReview {
 			fail(`Ogiltig ${key}.`);
 	}
 	const review = data as unknown as ReviewContent;
+	const score = sodaReviewScore(review);
 	return {
 		...review,
 		author: review.author!,
 		description: review.description!,
-		rating: review.sodaRatings
-			? ratingFromAverage(sodaScore(review.sodaRatings))
-			: calculateOverallRating(REVIEW_RATING_METRICS.map(({ key }) => review[key]!))
+		rating:
+			score === undefined
+				? calculateOverallRating(REVIEW_RATING_METRICS.map(({ key }) => review[key]!))
+				: ratingFromAverage(score)
 	};
 }

@@ -62,13 +62,13 @@ export function nutritionFacts(drink: DrinkFacts) {
 	return [
 		{
 			label: 'Koffein',
-			short: 'Koffein',
+			short: 'Koffein' as const,
 			unit: 'mg',
 			...nutrientAmounts(drink.caffeineMgPer100Ml, drink.caffeineMgPerContainer, drink.volumeMl)
 		},
 		{
 			label: 'KPL (kolhydrat per läsk)',
-			short: 'KPL',
+			short: 'KPL' as const,
 			unit: 'g',
 			...nutrientAmounts(
 				drink.carbohydrateGPer100Ml,
@@ -78,7 +78,7 @@ export function nutritionFacts(drink: DrinkFacts) {
 		},
 		{
 			label: 'PPL (protein per läsk)',
-			short: 'PPL',
+			short: 'PPL' as const,
 			unit: 'g',
 			...nutrientAmounts(drink.proteinGPer100Ml, drink.proteinGPerContainer, drink.volumeMl)
 		}

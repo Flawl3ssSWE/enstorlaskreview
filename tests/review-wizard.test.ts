@@ -1,4 +1,4 @@
-import { openEditorTools } from './review-editor-helpers';
+import { fillRating, fillTasting, openEditorTools } from './review-editor-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { validateReview } from '../src/lib/content/validation';
@@ -82,12 +82,47 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		await expect(page.getByRole('heading', { name: 'Smak', exact: true })).toBeFocused();
 		await page.getByLabel('Fri text').fill('Frisk och god.');
 		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+		await expect(page.locator('#profile-sweetness-1')).toBeFocused();
+		await expect(page.getByRole('radiogroup', { name: 'Sötma' }).getByRole('radio')).toHaveCount(5);
+		await expect(page.locator('#profile-sweetness-0')).toHaveCount(0);
+		await expect(page.getByRole('radiogroup', { name: 'Sötma' })).toContainText(
+			'Välj ett värde från 1 till 5.'
+		);
+		await fillTasting(page, true);
+		await fillRating(page, 'extra-name', 1, true);
+		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+		await expect(page.locator('#extra-packaging-1')).toBeFocused();
+		await fillRating(page, 'extra-packaging', 4, true);
+		await expect(page.locator('#extra-packaging-4')).toBeChecked();
+		await page.locator('#extra-packaging-4').press('ArrowRight');
+		await expect(page.locator('#extra-packaging-5')).toBeChecked();
+		await page.setViewportSize({ width: 320, height: 812 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+			true
+		);
+		await page.setViewportSize({ width: 850, height: 812 });
+		await expect(page.locator('#extra-packaging')).toHaveValue('5');
+		await page.setViewportSize({ width: 375, height: 812 });
+		await expect(page.locator('#extra-packaging-5')).toBeChecked();
+		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 		await expect(page.getByLabel('Återköpspotential')).toBeFocused();
-		await page.getByLabel('Återköpspotential').selectOption('0');
+		await page.getByLabel('Återköpspotential').selectOption('1');
 		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 		await expect(page.getByLabel('Författare', { exact: true })).toHaveValue('Anton');
 		await expect(page.locator('#sugar-type')).toHaveValue('sugar-free');
-		await page.getByLabel('Läskens namn / rubrik').fill('Testläsk Zero');
+		await page.getByLabel('Märke', { exact: true }).press('Tab');
+		const nameHelp = page.getByRole('button', { name: 'Om läskens namn', exact: true });
+		await expect(nameHelp).toBeFocused();
+		await expect(page.getByRole('tooltip')).toContainText(
+			'På kortet visas märke och namn tillsammans.'
+		);
+		await nameHelp.press('Tab');
+		const sodaName = page.getByLabel('Läskens namn / rubrik');
+		await expect(sodaName).toBeFocused();
+		await expect(sodaName).toHaveAccessibleDescription(
+			/På kortet visas märke och namn tillsammans/
+		);
+		await sodaName.fill('Testläsk Zero');
 		await expect(page.locator('#brand')).toHaveValue('Testläsk');
 		const brandHint = page.getByRole('button', { name: 'Automatiskt ifyllt: Märke', exact: true });
 		const brandPosition = await page.locator('#brand').boundingBox();
@@ -123,6 +158,7 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		await page.locator('#served-with-ice').selectOption({ label: 'Med is' });
 		await page.getByRole('checkbox', { name: 'Glas', exact: true }).check();
 		await expect(page.locator('#served-with-ice')).toHaveValue('true');
+		await page.getByLabel('Serveringstemperatur', { exact: true }).selectOption('Kylskåpskall');
 		await page.locator('#carbohydrate').fill('10');
 		await expect(page.locator('#sugar-type')).toHaveValue('sugared');
 		await page.locator('#sugar-type').selectOption('sugar-free');
@@ -134,6 +170,9 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
 		await expect(page.locator('#review-1-price')).toBeFocused();
 		await page.locator('#review-1-price').fill('12,5');
+		await page.getByRole('button', { name: 'Nästa', exact: true }).click();
+		await expect(page.locator('#extra-value-1')).toBeFocused();
+		await fillRating(page, 'extra-value', 2, true);
 		await expect(page.getByRole('slider', { name: 'Prislinjal' })).toHaveCount(0);
 		await openEditorTools(page);
 		await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
@@ -150,10 +189,13 @@ for (const route of ['skapa/', 'skapa/wizard/']) {
 		validateReview(json, file.suggestedFilename());
 		expect(json).toMatchObject({
 			author: 'Anton',
-			repurchasePotential: 0,
+			repurchasePotential: 1,
 			volumeMl: 500,
 			container: 'Glasflaska',
-			beerPriceKr: 12.5
+			beerPriceKr: 12.5,
+			servingTemperature: 'Kylskåpskall',
+			servedWithIce: true,
+			sodaTasting: { extras: { name: 1, packaging: 5, value: 2 } }
 		});
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
 			true
@@ -205,16 +247,38 @@ test('required data and automatic reset work in the full form', async ({ page })
 	await openEditorTools(page);
 	await page.getByRole('button', { name: 'Visa hela formuläret', exact: true }).click();
 	await image(page);
-	await page.locator('#repurchase-potential').selectOption('0');
+	await page.locator('#repurchase-potential').selectOption('1');
 	await page.getByLabel('Fri text').fill('Frisk.');
+	await fillTasting(page);
+	await fillRating(page, 'extra-name', 3);
+	await fillRating(page, 'extra-packaging', 3);
 	await page.getByLabel('Läskens namn / rubrik').fill('Testläsk Zero');
+	const brand = page.getByLabel('Märke', { exact: true });
+	await brand.fill('');
+	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
+	await expect(brand).toBeFocused();
+	expect(await brand.evaluate((input: HTMLInputElement) => input.validity.valueMissing)).toBe(true);
+	await brand.fill('   ');
+	expect(await brand.evaluate((input: HTMLInputElement) => input.validity.patternMismatch)).toBe(
+		true
+	);
+	await brand.fill('Testläsk');
 	await page.locator('#review-1-price').fill('20');
+	await fillRating(page, 'extra-value', 3);
 	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
 	await expect(page.locator('#review-1-volume')).toBeFocused();
 	await page.locator('#review-1-volume').selectOption('330');
 	await page.locator('#container').selectOption('');
 	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
 	await expect(page.locator('#container')).toBeFocused();
+	await page.locator('#container').selectOption('Burk');
+	const temperature = page.getByLabel('Serveringstemperatur', { exact: true });
+	const ice = page.getByLabel('Is', { exact: true });
+	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
+	await expect(temperature).toBeFocused();
+	await temperature.selectOption('Rumstempererad');
+	await page.getByRole('button', { name: 'Ladda ner JSON', exact: true }).click();
+	await expect(ice).toBeFocused();
 	await page.locator('#brand').fill('Eget');
 	await page.locator('#sugar-type').selectOption('sugared');
 	await page.getByRole('checkbox', { name: 'Originalförpackning', exact: true }).check();

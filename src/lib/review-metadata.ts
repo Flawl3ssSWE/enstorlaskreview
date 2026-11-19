@@ -58,7 +58,7 @@ export const REVIEW_RATING_METRICS = [
 	}
 ] as const satisfies readonly ReviewRatingMetric[];
 
-/** New soda scores use sweetness balance and consistency suitability. */
+/** Published legacy scores use these exact weights. */
 export const SODA_RATING_METRICS = [
 	{ key: 'taste', label: 'Smak', description: 'Hur god och tydlig är smaken?', weight: 0.3 },
 	{
@@ -100,12 +100,99 @@ export const SODA_RATING_METRICS = [
 	{ key: 'value', label: 'Pris', description: 'Hur prisvärd är läsken?', weight: 0.05 }
 ] as const;
 
-export const VENUE_RATING_METRICS = REVIEW_RATING_METRICS.filter(
-	(
-		metric
-	): metric is (typeof REVIEW_RATING_METRICS)[number] & {
-		key: import('./types/bar-review').VenueRatingKey;
-	} => ['atmosphere', 'service', 'selection', 'cleanliness', 'soundLevel'].includes(metric.key)
+export const TASTING_MIN_RATING = 1;
+
+export const TASTING_PROFILE_METRICS = [
+	{
+		key: 'sweetness',
+		label: 'Sötma',
+		description: '1 = ingen märkbar sötma, 3 = tydligt söt, 5 = mycket söt.'
+	},
+	{
+		key: 'acidity',
+		label: 'Surhet',
+		description: '1 = ingen märkbar surhet, 3 = tydligt syrlig, 5 = ordentligt sur.'
+	},
+	{
+		key: 'carbonation',
+		label: 'Kolsyra',
+		description: '1 = stilla eller avslagen, 3 = tydligt bubblig, 5 = väldigt kraftigt bubblig.'
+	},
+	{
+		key: 'body',
+		label: 'Fyllighet',
+		description: '1 = vattnig, 3 = medelfyllig, 5 = tjock eller sirapslik.'
+	},
+	{
+		key: 'bitterness',
+		label: 'Beska',
+		description: '1 = ingen märkbar beska, 3 = tydligt besk, 5 = dominerande beska.'
+	}
+] as const;
+
+export const TASTING_RATING_METRICS = [
+	{ key: 'taste', label: 'Smak', description: 'Hur god är smaken i själva klunken?', weight: 40 },
+	{
+		key: 'balance',
+		label: 'Balans',
+		description: 'Hur väl fungerar sötma, surhet och beska ihop för den här typen av läsk?',
+		weight: 25
+	},
+	{
+		key: 'aftertaste',
+		label: 'Eftersmak',
+		description: 'Hur behagligt smakar det efter klunken? Även en kort, ren avslutning kan få 5.',
+		weight: 20
+	},
+	{
+		key: 'mouthfeel',
+		label: 'Munkänsla',
+		description: 'Hur väl passar bubblorna och fylligheten till drycken?',
+		weight: 15
+	}
+] as const;
+
+export const TASTING_EXTRA_METRICS = [
+	{
+		key: 'name',
+		label: 'Namnet',
+		description: 'Passar namnet läsken, väcker det nyfikenhet och är det lätt att komma ihåg?'
+	},
+	{
+		key: 'packaging',
+		label: 'Förpackningen',
+		description:
+			'Bedöm utseende och känsla. För läsk från tapp kan du bedöma glaset eller muggen den serverades i.'
+	},
+	{
+		key: 'value',
+		label: 'Prisvärdhet',
+		description: 'Hur prisvärd är läsken till det pris du betalade?'
+	}
+] as const;
+
+export const ADDITIONAL_VENUE_RATING_KEYS = ['quality', 'price', 'barhopPotential'] as const;
+
+const venueDescriptions: Partial<Record<ReviewRatingKey, string>> = {
+	quality: 'Hur väl serveras läsken? Bedöm till exempel temperatur och bevarad kolsyra.',
+	price:
+		'Hur rimliga är ställets läskpriser jämfört med andra barers, för liknande läsk och mängd?',
+	barhopPotential: 'Hur lätt är det att gå vidare härifrån till andra barer?'
+};
+
+export const VENUE_RATING_METRICS = REVIEW_RATING_METRICS.map((metric) => ({
+	...metric,
+	description: venueDescriptions[metric.key] ?? metric.description
+}));
+
+export const LEGACY_VENUE_RATING_METRICS = VENUE_RATING_METRICS.filter(
+	({ key }) => !ADDITIONAL_VENUE_RATING_KEYS.some((additional) => additional === key)
+);
+
+export const TASTING_VENUE_RATING_METRICS = VENUE_RATING_METRICS.map((metric) =>
+	metric.key === 'soundLevel'
+		? { ...metric, description: 'Ljudnivå (1 = högljutt, 5 = tyst)' }
+		: metric
 );
 
 export const DRINK_CONTAINERS = [
@@ -131,6 +218,11 @@ export const REPURCHASE_POTENTIAL_LABELS = [
 	'Given i kylen'
 ] as const;
 
+export const TASTING_REPURCHASE_POTENTIAL_LABELS = [
+	REPURCHASE_POTENTIAL_LABELS[0],
+	...REPURCHASE_POTENTIAL_LABELS.slice(2)
+];
+
 export const DRINK_TYPE_FILTERS = [
 	{ value: 'energy', label: 'Energidryck' },
 	{ value: 'protein', label: 'Proteindryck' },
@@ -144,8 +236,8 @@ export const SERVING_TEMPERATURES = ['Kylskåpskall', 'Rumstempererad', 'Varm'] 
 
 /** Lower bounds for the published 0–3 rating, shared with the review overview. */
 export const OVERALL_RATING_LEVELS = [
-	{ rating: 0, minimum: 0 },
-	{ rating: 1, minimum: 2.5 },
-	{ rating: 2, minimum: 3.5 },
-	{ rating: 3, minimum: 4.5 }
+	{ rating: 0, minimum: 0, label: 'Meh, det här var inget vidare.' },
+	{ rating: 1, minimum: 2.5, label: 'Jodå, det här går ju att dricka.' },
+	{ rating: 2, minimum: 3.5, label: 'Smaskens! Nu börjar det likna nåt.' },
+	{ rating: 3, minimum: 4.5, label: 'Wow, ge mig en till!' }
 ] as const;

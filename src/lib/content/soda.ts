@@ -1,5 +1,10 @@
-import { SODA_RATING_METRICS } from '../review-metadata.ts';
-import type { PublicReview, SodaRatingValues } from '../types/bar-review.ts';
+import { SODA_RATING_METRICS, TASTING_RATING_METRICS } from '../review-metadata.ts';
+import type {
+	PublicReview,
+	ReviewContent,
+	SodaRatingValues,
+	SodaTasting
+} from '../types/bar-review.ts';
 
 export const reviewerKey = (name: string) => name.trim().normalize('NFC').toLocaleLowerCase('sv');
 
@@ -8,7 +13,7 @@ export function sweetnessBalance(value: number): number {
 }
 
 export function sodaScore(ratings: SodaRatingValues): number {
-	// Preserve published scores until the author supplies the new suitability rating.
+	// The first published soda model predates the suitability rating.
 	if (ratings.mouthfeelMatch === undefined) {
 		return (
 			(ratings.taste +
@@ -25,8 +30,25 @@ export function sodaScore(ratings: SodaRatingValues): number {
 	}, 0);
 }
 
+export function tastingScore(ratings: SodaTasting['ratings']): number {
+	return (
+		TASTING_RATING_METRICS.reduce((sum, { key, weight }) => sum + ratings[key] * weight, 0) / 100
+	);
+}
+
+export function isSodaReview(review: Pick<ReviewContent, 'sodaRatings' | 'sodaTasting'>): boolean {
+	return review.sodaTasting !== undefined || review.sodaRatings !== undefined;
+}
+
+export function sodaReviewScore(
+	review: Pick<ReviewContent, 'sodaRatings' | 'sodaTasting'>
+): number | undefined {
+	if (review.sodaTasting) return tastingScore(review.sodaTasting.ratings);
+	if (review.sodaRatings) return sodaScore(review.sodaRatings);
+}
+
 export function reviewScore(review: PublicReview): number {
-	return review.sodaRatings ? sodaScore(review.sodaRatings) : review.rating;
+	return sodaReviewScore(review) ?? review.rating;
 }
 
 export function selectReviewer(review: PublicReview, author: string): PublicReview | undefined {
