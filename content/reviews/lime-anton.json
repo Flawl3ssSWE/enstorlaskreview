@@ -1,0 +1,29 @@
+{
+	"title": "Lime",
+	"sodaId": "pepsi-lime",
+	"slug": "lime-anton",
+	"image": "lime-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-19T10:57:34.270Z",
+	"updatedAt": "2026-11-19T10:57:34.270Z",
+	"author": "Anton",
+	"description": "Pepsi Lime eller Pepsi Slime som en del säger, en riktigt god läsk med svaga toner av cola och lime.",
+	"favorite": true,
+	"repurchasePotential": 5,
+	"sodaTasting": {
+		"profile": { "sweetness": 3, "acidity": 2, "carbonation": 3, "body": 2, "bitterness": 1 },
+		"ratings": { "taste": 5, "balance": 5, "aftertaste": 5, "mouthfeel": 3 },
+		"extras": { "name": 4, "packaging": 5, "value": 4 }
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"sugarType": "sugar-free",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"beerBrand": "Pepsi",
+	"beerPriceKr": 8,
+	"imageFocusX": 50,
+	"imageFocusY": 0,
+	"imageZoom": 1
+}
