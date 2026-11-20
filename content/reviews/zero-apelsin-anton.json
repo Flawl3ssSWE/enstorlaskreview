@@ -1,0 +1,29 @@
+{
+	"title": "Zero Apelsin",
+	"sodaId": "zingo-zero-apelsin",
+	"slug": "zero-apelsin-anton",
+	"image": "zero-apelsin-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-20T10:54:56.724Z",
+	"updatedAt": "2026-11-20T10:54:56.724Z",
+	"author": "Anton",
+	"description": "En svensk klassiker får man väl ändå kalla Zingo men får säga att jag tycker den är lite för söt.",
+	"favorite": false,
+	"repurchasePotential": 3,
+	"sodaTasting": {
+		"profile": { "sweetness": 5, "acidity": 2, "carbonation": 3, "body": 1, "bitterness": 1 },
+		"ratings": { "taste": 3, "balance": 2, "aftertaste": 4, "mouthfeel": 3 },
+		"extras": { "name": 5, "packaging": 3, "value": 4 }
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"sugarType": "sugar-free",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"beerBrand": "Zingo",
+	"beerPriceKr": 8,
+	"imageFocusX": 0,
+	"imageFocusY": 77.69423558897235,
+	"imageZoom": 1.1
+}
