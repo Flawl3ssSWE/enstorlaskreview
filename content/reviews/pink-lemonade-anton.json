@@ -1,0 +1,29 @@
+{
+	"title": "Pink Lemonade",
+	"sodaId": "7up-pink-lemonade",
+	"slug": "pink-lemonade-anton",
+	"image": "pink-lemonade-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-21T20:18:38.600Z",
+	"updatedAt": "2026-11-21T20:18:38.600Z",
+	"author": "Anton",
+	"description": "Det är som en faktiskt god 7up, händer dock inte så mycket vid klunken men sen klickar eftersmaken in och då. Då blir det gott!\n\nVad smakar den då, jag vet inte men det är sött. På burken står det citron, lime och hallon, men tycker inte det finns några  tydliga tendenser av hallon.",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaTasting": {
+		"profile": { "sweetness": 3, "acidity": 2, "carbonation": 4, "body": 1, "bitterness": 1 },
+		"ratings": { "taste": 3, "balance": 5, "aftertaste": 5, "mouthfeel": 4 },
+		"extras": { "name": 4, "packaging": 3, "value": 4 }
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"sugarType": "sugar-free",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"beerBrand": "7up",
+	"beerPriceKr": 8,
+	"imageFocusX": 19.135802469135776,
+	"imageFocusY": 59.03774587985109,
+	"imageZoom": 1.3
+}
