@@ -1,0 +1,31 @@
+{
+	"title": "The Yellow Edition Sugarfree",
+	"sodaId": "red-bull-the-yellow-edition-sugarfree",
+	"slug": "the-yellow-edition-sugarfree-anton",
+	"image": "the-yellow-edition-sugarfree-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-22T15:25:42.828Z",
+	"updatedAt": "2026-11-22T15:25:42.828Z",
+	"author": "Anton",
+	"description": "Smakar lite citrusfruktigt men inga riktiga tendenser av surhet på själva drycken. Smakar dock gott men nog ändå inget jag lär köpa igen.",
+	"favorite": false,
+	"repurchasePotential": 1,
+	"sodaTasting": {
+		"profile": { "sweetness": 3, "acidity": 2, "carbonation": 3, "body": 1, "bitterness": 1 },
+		"ratings": { "taste": 3, "balance": 4, "aftertaste": 3, "mouthfeel": 3 },
+		"extras": { "name": 2, "packaging": 4, "value": 2 }
+	},
+	"container": "Burk",
+	"volumeMl": 250,
+	"isEnergyDrink": true,
+	"sugarType": "sugar-free",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"caffeineMgPer100Ml": 32,
+	"beerBrand": "Red Bull",
+	"beerPriceKr": 11,
+	"imageFocusX": 50,
+	"imageFocusY": 40.6432748538012,
+	"imageZoom": 1
+}
