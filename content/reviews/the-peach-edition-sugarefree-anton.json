@@ -1,0 +1,32 @@
+{
+	"title": "The Peach Edition Sugarefree",
+	"sodaId": "red-bulle-the-peach-edition-sugarefree",
+	"slug": "the-peach-edition-sugarefree-anton",
+	"image": "the-peach-edition-sugarefree-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-24T13:34:12.070Z",
+	"updatedAt": "2026-11-24T13:34:12.070Z",
+	"author": "Anton",
+	"description": "Smakar lite åt det sura hållet, vill påstå att den typ smakar lite sur jordgubbe, men den ska egentligen smaka vit persiska. Men har nog faktiskt aldrig ätit vit persiska. Smakar dock gott men nog ändå inget jag lär köpa igen.",
+	"favorite": false,
+	"repurchasePotential": 1,
+	"sodaTasting": {
+		"profile": { "sweetness": 3, "acidity": 2, "carbonation": 2, "body": 1, "bitterness": 1 },
+		"ratings": { "taste": 3, "balance": 2, "aftertaste": 3, "mouthfeel": 4 },
+		"extras": { "name": 4, "packaging": 3, "value": 2 }
+	},
+	"container": "Burk",
+	"volumeMl": 250,
+	"isEnergyDrink": true,
+	"sugarType": "sugar-free",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Rumstempererad",
+	"servedWithIce": false,
+	"caffeineMgPer100Ml": 32,
+	"beerBrand": "Red Bulle",
+	"beerPriceKr": 11,
+	"isOnSale": true,
+	"imageFocusX": 39.60363872644577,
+	"imageFocusY": 53.056884635832034,
+	"imageZoom": 1.3
+}
