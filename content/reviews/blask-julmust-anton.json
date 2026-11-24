@@ -1,0 +1,30 @@
+{
+	"title": "Blask Julmust",
+	"sodaId": "gbg-soda-blask-julmust",
+	"slug": "blask-julmust-anton",
+	"image": "blask-julmust-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-24T20:01:42.594Z",
+	"updatedAt": "2026-11-24T20:01:42.594Z",
+	"author": "Anton",
+	"description": "Definitivt en av de godare julmustarna, smakar som en klassisk julmust i grund och botten. Sen är det ju alltid trevligt med lokal producerat också! Men tror det finns godare speciellt när man ser till priset.\n\nFun fact, idag är det Julmustens dag (24/11-2026), och det är för min del säsongens första julmust! Upp till bevis på hur skev recensionen blir jämfört med resten av julmustar som skall testas.",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaTasting": {
+		"profile": { "sweetness": 4, "acidity": 1, "carbonation": 3, "body": 1, "bitterness": 1 },
+		"ratings": { "taste": 4, "balance": 4, "aftertaste": 5, "mouthfeel": 4 },
+		"extras": { "name": 4, "packaging": 3, "value": 2 }
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"sugarType": "sugared",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"carbohydrateGPer100Ml": 10.7,
+	"beerBrand": "GBG Soda",
+	"beerPriceKr": 25,
+	"imageFocusX": 50,
+	"imageFocusY": 73.34630350194553,
+	"imageZoom": 1
+}
