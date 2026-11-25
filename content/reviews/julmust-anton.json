@@ -1,0 +1,30 @@
+{
+	"title": "Julmust",
+	"sodaId": "apotekarnes-julmust",
+	"slug": "julmust-anton",
+	"image": "julmust-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-25T10:48:46.562Z",
+	"updatedAt": "2026-11-25T10:48:46.562Z",
+	"author": "Anton",
+	"description": "För mig den mest klassiska julmusten och den jag druckit sen jag var liten. Är ju god men inget som sticker ut, tror det finns bättre must där ute!\n\nÄr det Apotek-Arnes eller Apotekar-Nes.",
+	"favorite": false,
+	"repurchasePotential": 4,
+	"sodaTasting": {
+		"profile": { "sweetness": 2, "acidity": 1, "carbonation": 3, "body": 2, "bitterness": 1 },
+		"ratings": { "taste": 3, "balance": 4, "aftertaste": 5, "mouthfeel": 4 },
+		"extras": { "name": 5, "packaging": 5, "value": 5 }
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"sugarType": "sugared",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"carbohydrateGPer100Ml": 8.8,
+	"beerBrand": "Apotekarnes",
+	"beerPriceKr": 8.5,
+	"imageFocusX": 35.18518518518519,
+	"imageFocusY": 46.92982456140347,
+	"imageZoom": 1.25
+}
