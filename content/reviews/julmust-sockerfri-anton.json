@@ -1,0 +1,29 @@
+{
+	"title": "Julmust Sockerfri",
+	"sodaId": "apotekarnes-julmust-sockerfri",
+	"slug": "julmust-sockerfri-anton",
+	"image": "julmust-sockerfri-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-26T11:09:35.624Z",
+	"updatedAt": "2026-11-26T11:09:35.624Z",
+	"author": "Anton",
+	"description": "Är något med sockerfri julmust den är verkligen vattnig och smakar inte lika mycket.\n\nÄr det Apotek-Arnes eller Apotekar-Nes?",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaTasting": {
+		"profile": { "sweetness": 3, "acidity": 1, "carbonation": 4, "body": 1, "bitterness": 1 },
+		"ratings": { "taste": 2, "balance": 4, "aftertaste": 2, "mouthfeel": 3 },
+		"extras": { "name": 5, "packaging": 4, "value": 5 }
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"sugarType": "sugar-free",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"beerBrand": "Apotekarnes",
+	"beerPriceKr": 8.5,
+	"imageFocusX": 50,
+	"imageFocusY": 94.73684210526318,
+	"imageZoom": 1
+}
