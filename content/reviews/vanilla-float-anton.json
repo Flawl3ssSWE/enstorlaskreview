@@ -1,0 +1,30 @@
+{
+	"title": "Vanilla Float",
+	"sodaId": "dr-pepper-vanilla-float",
+	"slug": "vanilla-float-anton",
+	"image": "vanilla-float-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-26T18:46:31.486Z",
+	"updatedAt": "2026-11-26T18:46:31.486Z",
+	"author": "Anton",
+	"description": "Alltså jag står fast i det jag sagt innan jag är inget superfan av vanilla läskar, men vill nog ändå påstå att denna har varit bäst av dem jag testat hittills. Hittar dock ingen flytande vaniljglass i den :(, men den har en rätt så god gräddig eftersmak (hemlig liten note om jag inte hade börjat reviewa läsk så hade det varit glass!). Detta måste även vara en av de minst sockrad sockrade läskerna på \"marknaden\" 4,3 gram per 100 ml.\n\nImportläsk med smak ursprungligen från USA, men just denna burken verkar vara polsk.",
+	"favorite": false,
+	"repurchasePotential": 2,
+	"sodaTasting": {
+		"profile": { "sweetness": 4, "acidity": 2, "carbonation": 3, "body": 2, "bitterness": 1 },
+		"ratings": { "taste": 3, "balance": 3, "aftertaste": 4, "mouthfeel": 4 },
+		"extras": { "name": 4, "packaging": 4, "value": 2 }
+	},
+	"container": "Burk",
+	"volumeMl": 330,
+	"sugarType": "sugared",
+	"servingMethods": ["Originalförpackning"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"carbohydrateGPer100Ml": 4.3,
+	"beerBrand": "Dr Pepper",
+	"beerPriceKr": 19,
+	"imageFocusX": 50,
+	"imageFocusY": 50,
+	"imageZoom": 1
+}
