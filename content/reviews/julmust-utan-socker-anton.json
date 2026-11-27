@@ -1,0 +1,29 @@
+{
+	"title": "Julmust utan Socker",
+	"sodaId": "premier-julmust-utan-socker",
+	"slug": "julmust-utan-socker-anton",
+	"image": "julmust-utan-socker-anton.webp",
+	"location": "",
+	"createdAt": "2026-11-27T11:07:59.345Z",
+	"updatedAt": "2026-11-27T11:07:59.345Z",
+	"author": "Anton",
+	"description": "Förvånansvärt god julmust i förhållande till priset, känns inte riktigt som en sockerfri läsk, dock lite lite kolsyra.",
+	"favorite": false,
+	"repurchasePotential": 1,
+	"sodaTasting": {
+		"profile": { "sweetness": 4, "acidity": 1, "carbonation": 2, "body": 1, "bitterness": 1 },
+		"ratings": { "taste": 3, "balance": 3, "aftertaste": 3, "mouthfeel": 2 },
+		"extras": { "name": 5, "packaging": 4, "value": 4 }
+	},
+	"container": "Flaska",
+	"volumeMl": 1500,
+	"sugarType": "sugar-free",
+	"servingMethods": ["Glas"],
+	"servingTemperature": "Kylskåpskall",
+	"servedWithIce": false,
+	"beerBrand": "Premier",
+	"beerPriceKr": 10,
+	"imageFocusX": 50,
+	"imageFocusY": 50,
+	"imageZoom": 1
+}
